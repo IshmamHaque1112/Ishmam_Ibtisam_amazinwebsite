@@ -3,6 +3,7 @@ import { useStore } from '../context/store';
 import { mockProducts, mockSellers } from '../data/mockData';
 import CartItem from './CartItem';
 import CartFolder from './CartFolder';
+import { CartItem as CartItemType } from '../types';
 
 const CartView: React.FC = () => {
   const { cartItems, cartFolders, createFolder } = useStore();

@@ -10,7 +10,10 @@ function App() {
   const { currentView, username } = useStore();
 
   useEffect(() => {
-    initializeStore();
+    // Only initialize in browser environment
+    if (typeof window !== 'undefined') {
+      initializeStore();
+    }
   }, []);
 
   return (

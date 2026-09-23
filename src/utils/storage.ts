@@ -2,23 +2,30 @@ import { UserSession, CartState } from '../types';
 
 const STORAGE_KEY_PREFIX = 'amazon_marketplace_';
 
+// Check if we're in a browser environment
+const isBrowser = typeof window !== 'undefined' && typeof sessionStorage !== 'undefined';
+
 // Get current username from session
 export const getCurrentUsername = (): string | null => {
+  if (!isBrowser) return null;
   return sessionStorage.getItem('currentUsername');
 };
 
 // Set current username
 export const setCurrentUsername = (username: string): void => {
+  if (!isBrowser) return;
   sessionStorage.setItem('currentUsername', username);
 };
 
 // Clear current username
 export const clearCurrentUsername = (): void => {
+  if (!isBrowser) return;
   sessionStorage.removeItem('currentUsername');
 };
 
 // Get user data from localStorage
 export const getUserData = (username: string): UserSession | null => {
+  if (!isBrowser) return null;
   try {
     const data = localStorage.getItem(`${STORAGE_KEY_PREFIX}${username}`);
     return data ? JSON.parse(data) : null;
@@ -30,6 +37,7 @@ export const getUserData = (username: string): UserSession | null => {
 
 // Save user data to localStorage
 export const saveUserData = (username: string, data: UserSession): void => {
+  if (!isBrowser) return;
   try {
     localStorage.setItem(`${STORAGE_KEY_PREFIX}${username}`, JSON.stringify(data));
   } catch (error) {
@@ -61,6 +69,7 @@ export const getOrCreateUserData = (username: string): UserSession => {
 
 // Delete user data
 export const deleteUserData = (username: string): void => {
+  if (!isBrowser) return;
   try {
     localStorage.removeItem(`${STORAGE_KEY_PREFIX}${username}`);
   } catch (error) {
@@ -70,6 +79,7 @@ export const deleteUserData = (username: string): void => {
 
 // Get all usernames (for user switching)
 export const getAllUsernames = (): string[] => {
+  if (!isBrowser) return [];
   try {
     const keys = Object.keys(localStorage);
     const usernames = keys

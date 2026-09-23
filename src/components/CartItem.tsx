@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { CartItem as CartItemType, Product, Seller } from '../types';
+import { CartItem, Product, Seller } from '../types';
 import { useStore } from '../context/store';
 import { formatPriceLockCountdown, isPriceLockValid } from '../utils/ratingCalculations';
 
-interface CartItemProps {
-  item: CartItemType;
+interface CartItemComponentProps {
+  item: CartItem;
   product: Product;
   seller: Seller;
 }
 
-const CartItem: React.FC<CartItemProps> = ({ item, product, seller }) => {
+const CartItem: React.FC<CartItemComponentProps> = ({ item, product, seller }) => {
   const {
     updateCartItemQuantity,
     removeFromCart,
@@ -19,10 +19,18 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller }) => {
     moveItemToFolder
   } = useStore();
   
-  const [countdown, setCountdown] = useState('');
+  const [countdown, setCountdown] = useState(() => {
+    // Initialize countdown only in browser
+    if (typeof window !== 'undefined' && item.priceLocked && item.lockedTimestamp) {
+      return formatPriceLockCountdown(item.lockedTimestamp);
+    }
+    return '';
+  });
 
   // Update countdown every minute
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     if (item.priceLocked && item.lockedTimestamp) {
       setCountdown(formatPriceLockCountdown(item.lockedTimestamp));
       

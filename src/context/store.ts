@@ -41,7 +41,7 @@ export const useStore = create<StoreState>((set, get) => ({
   cartItems: [],
   cartFolders: [],
   currentView: 'products',
-  loginModalOpen: false,
+  loginModalOpen: getCurrentUsername() === null,
 
   setUsername: (username: string) => {
     setCurrentUsername(username);
@@ -226,6 +226,9 @@ export const useStore = create<StoreState>((set, get) => ({
 
 // Initialize store on app load
 export const initializeStore = () => {
+  // Only initialize in browser environment
+  if (typeof window === 'undefined') return;
+  
   const username = getCurrentUsername();
   if (username) {
     const store = useStore.getState();
