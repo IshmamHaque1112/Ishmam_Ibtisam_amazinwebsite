@@ -57,7 +57,7 @@ const CartItem: React.FC<CartItemComponentProps> = ({ item, product, seller }) =
             type="checkbox"
             checked={item.isSelected}
             onChange={() => toggleCartItemSelection(item.id)}
-            className="w-5 h-5 text-amazon-orange rounded focus:ring-amazon-orange"
+            className="w-5 h-5 text-amazin-orange rounded focus:ring-amazin-orange"
           />
         </div>
 

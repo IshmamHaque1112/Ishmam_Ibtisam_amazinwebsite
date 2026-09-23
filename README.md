@@ -1,6 +1,6 @@
-# Amazon Marketplace - Transparent Shopping Platform
+# Amazin - Transparent Shopping Platform
 
-A modern, transparent Amazon-style marketplace web app with advanced cart management, dynamic pricing, and quality ratings.
+A modern, transparent marketplace web app with advanced cart management, dynamic pricing, and quality ratings.
 
 ## 🚀 Features
 
@@ -112,7 +112,7 @@ src/
 ### Username Scoping
 All user data is stored in localStorage with the pattern:
 ```
-amazon_marketplace_{username} → {
+amazin_{username} → {
   username: string,
   cart: {
     items: CartItem[],

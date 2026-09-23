@@ -184,7 +184,7 @@ export const mockProducts: Product[] = [
 export const mockSellers: Seller[] = [
   {
     id: 's1',
-    name: 'Amazon',
+    name: 'Amazin',
     qualityScore: 95,
     deliverySpeed: 95,
     relativePrice: 1.0,

@@ -71,12 +71,12 @@ const CartView: React.FC = () => {
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 placeholder="Folder name (e.g., Pantry, School Supplies)"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amazon-orange focus:border-transparent"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amazin-orange focus:border-transparent"
               />
               <button
                 onClick={handleCreateFolder}
                 disabled={!newFolderName.trim()}
-                className="bg-amazon-orange hover:bg-amazon-yellow text-white font-semibold px-6 py-2 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="bg-amazin-orange hover:bg-amazin-yellow text-white font-semibold px-6 py-2 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 Create
               </button>
@@ -161,20 +161,20 @@ const CartView: React.FC = () => {
 
               <div className="border-t pt-3 flex justify-between">
                 <span className="text-lg font-bold text-gray-900">Grand Total</span>
-                <span className="text-lg font-bold text-amazon-orange">${grandTotal.toFixed(2)}</span>
+                <span className="text-lg font-bold text-amazin-orange">${grandTotal.toFixed(2)}</span>
               </div>
             </div>
 
             {/* Checkout Button */}
             <button
               disabled={activeSubtotal === 0}
-              className="w-full bg-amazon-orange hover:bg-amazon-yellow text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full bg-amazin-orange hover:bg-amazin-yellow text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               Proceed to Checkout
             </button>
 
             <p className="text-xs text-gray-500 text-center mt-4">
-              🔒 Secure checkout powered by Amazon
+              🔒 Secure checkout powered by Amazin
             </p>
           </div>
         </div>

@@ -29,7 +29,7 @@ const LoginModal: React.FC = () => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Amazon Marketplace</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Amazin</h2>
         <p className="text-gray-600 mb-6">Enter Username to Start Shopping</p>
         
         <form onSubmit={handleSubmit} className="mb-6">
@@ -42,7 +42,7 @@ const LoginModal: React.FC = () => {
               id="username"
               value={username}
               onChange={(e) => setUsernameInput(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amazon-orange focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amazin-orange focus:border-transparent"
               placeholder="Enter your username"
               autoFocus
             />
@@ -50,7 +50,7 @@ const LoginModal: React.FC = () => {
           <button
             type="submit"
             disabled={!username.trim()}
-            className="w-full bg-amazon-orange hover:bg-amazon-yellow text-white font-semibold py-2 px-4 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="w-full bg-amazin-orange hover:bg-amazin-yellow text-white font-semibold py-2 px-4 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             Start Shopping
           </button>

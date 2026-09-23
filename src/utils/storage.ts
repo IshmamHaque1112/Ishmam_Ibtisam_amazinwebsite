@@ -1,6 +1,6 @@
 import { UserSession, CartState } from '../types';
 
-const STORAGE_KEY_PREFIX = 'amazon_marketplace_';
+const STORAGE_KEY_PREFIX = 'amazin_';
 
 // Check if we're in a browser environment
 const isBrowser = typeof window !== 'undefined' && typeof sessionStorage !== 'undefined';

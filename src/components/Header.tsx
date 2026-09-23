@@ -16,34 +16,33 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-amazon-dark text-white">
+    <header className="bg-amazin-dark text-white">
       <div className="max-w-7xl mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center space-x-2">
-            <div className="text-2xl font-bold text-amazon-orange">amazon</div>
-            <span className="text-sm text-gray-300">marketplace</span>
+            <div className="text-2xl font-bold text-amazin-orange">amazin</div>
           </div>
 
           {/* Navigation */}
           <nav className="flex items-center space-x-6">
             <button
               onClick={() => setCurrentView('products')}
-              className={`text-sm hover:text-amazon-orange transition-colors ${
-                currentView === 'products' ? 'text-amazon-orange font-semibold' : 'text-gray-300'
+              className={`text-sm hover:text-amazin-orange transition-colors ${
+                currentView === 'products' ? 'text-amazin-orange font-semibold' : 'text-gray-300'
               }`}
             >
               Products
             </button>
             <button
               onClick={() => setCurrentView('cart')}
-              className={`text-sm hover:text-amazon-orange transition-colors flex items-center ${
-                currentView === 'cart' ? 'text-amazon-orange font-semibold' : 'text-gray-300'
+              className={`text-sm hover:text-amazin-orange transition-colors flex items-center ${
+                currentView === 'cart' ? 'text-amazin-orange font-semibold' : 'text-gray-300'
               }`}
             >
               Cart
               {selectedItemsCount > 0 && (
-                <span className="ml-2 bg-amazon-orange text-white text-xs px-2 py-1 rounded-full">
+                <span className="ml-2 bg-amazin-orange text-white text-xs px-2 py-1 rounded-full">
                   {selectedItemsCount}
                 </span>
               )}
@@ -54,7 +53,7 @@ const Header: React.FC = () => {
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-2 text-sm hover:text-amazon-orange transition-colors"
+              className="flex items-center space-x-2 text-sm hover:text-amazin-orange transition-colors"
             >
               <div className="text-right">
                 <div className="text-xs text-gray-400">Hello, {username || 'Guest'}</div>

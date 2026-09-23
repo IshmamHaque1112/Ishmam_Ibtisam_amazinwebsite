@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        amazon: {
+        amazin: {
           orange: '#FF9900',
           dark: '#232F3E',
           light: '#37475A',

@@ -80,7 +80,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, sellers }) => {
         <select
           value={selectedSeller.id}
           onChange={(e) => setSelectedSeller(sellers.find(s => s.id === e.target.value)!)}
-          className="w-full text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-amazon-orange focus:border-transparent"
+          className="w-full text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-2 focus:ring-amazin-orange focus:border-transparent"
         >
           {sellers.map((seller) => (
             <option key={seller.id} value={seller.id}>
@@ -105,7 +105,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, sellers }) => {
       <div className="mb-3">
         <button
           onClick={() => setShowFolderSelect(!showFolderSelect)}
-          className="text-xs text-amazon-blue hover:underline"
+          className="text-xs text-amazin-blue hover:underline"
         >
           {showFolderSelect ? 'Hide folder options' : 'Add to folder'}
         </button>
@@ -148,7 +148,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, sellers }) => {
       {/* Add to Cart Button */}
       <button
         onClick={handleAddToCart}
-        className="w-full bg-amazon-orange hover:bg-amazon-yellow text-white font-semibold py-2 px-4 rounded-md transition-colors"
+        className="w-full bg-amazin-orange hover:bg-amazin-yellow text-white font-semibold py-2 px-4 rounded-md transition-colors"
       >
         Add to Cart
       </button>

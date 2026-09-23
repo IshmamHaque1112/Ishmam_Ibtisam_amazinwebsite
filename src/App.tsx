@@ -32,7 +32,7 @@ function App() {
           <div className="flex items-center justify-center min-h-[50vh]">
             <div className="text-center">
               <div className="text-6xl mb-4">🛒</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Amazon Marketplace</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Amazin</h2>
               <p className="text-gray-600">Please log in to start shopping</p>
             </div>
           </div>

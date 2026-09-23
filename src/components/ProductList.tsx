@@ -6,13 +6,13 @@ const ProductList: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Amazon Marketplace</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Amazin</h1>
         <p className="text-gray-600">Transparent pricing, quality ratings, and smart shopping tools</p>
       </div>
 
       {/* Category Filter */}
       <div className="mb-6 flex flex-wrap gap-2">
-        <button className="px-4 py-2 bg-amazon-orange text-white rounded-full text-sm font-medium">
+        <button className="px-4 py-2 bg-amazin-orange text-white rounded-full text-sm font-medium">
           All Products
         </button>
         <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-300">
