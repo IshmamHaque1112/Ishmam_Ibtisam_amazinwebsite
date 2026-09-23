@@ -1,14 +1,14 @@
 import { create } from 'zustand';
 import { CartItem, CartFolder, Product, Seller } from '../types';
-import { 
-  getCurrentUsername, 
-  setCurrentUsername, 
+import {
+  getCurrentUsername,
+  setCurrentUsername,
   clearCurrentUsername,
   getOrCreateUserData,
   saveUserData,
-  getAllUsernames,
-  deleteUserData
+  getAllUsernames
 } from '../utils/storage';
+import { isPriceLockValid } from '../utils/ratingCalculations';
 
 interface StoreState {
   username: string | null;
@@ -16,7 +16,7 @@ interface StoreState {
   cartFolders: CartFolder[];
   currentView: 'products' | 'cart';
   loginModalOpen: boolean;
-  
+
   // Actions
   setUsername: (username: string) => void;
   logout: () => void;
@@ -25,7 +25,9 @@ interface StoreState {
   removeFromCart: (itemId: string) => void;
   updateCartItemQuantity: (itemId: string, quantity: number) => void;
   toggleCartItemSelection: (itemId: string) => void;
-  togglePriceLock: (itemId: string) => void;
+  setAllCartItemsSelected: (selected: boolean) => void;
+  togglePriceLock: (itemId: string, currentPrice: number) => void;
+  checkoutSelectedItems: () => CartItem[];
   createFolder: (name: string) => void;
   deleteFolder: (folderId: string) => void;
   moveItemToFolder: (itemId: string, folderId: string | undefined) => void;
@@ -41,7 +43,7 @@ export const useStore = create<StoreState>((set, get) => ({
   cartItems: [],
   cartFolders: [],
   currentView: 'products',
-  loginModalOpen: getCurrentUsername() === null,
+  loginModalOpen: false,
 
   setUsername: (username: string) => {
     setCurrentUsername(username);
@@ -77,7 +79,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
   addToCart: (product: Product, seller: Seller, folderId?: string) => {
     const { cartItems } = get();
-    
+
     // Check if item already exists in cart
     const existingItem = cartItems.find(
       item => item.productId === product.id && item.sellerId === seller.id && item.folderId === folderId
@@ -104,7 +106,7 @@ export const useStore = create<StoreState>((set, get) => ({
       };
       set({ cartItems: [...cartItems, newItem] });
     }
-    
+
     get().saveCurrentState();
   },
 
@@ -140,21 +142,43 @@ export const useStore = create<StoreState>((set, get) => ({
     get().saveCurrentState();
   },
 
-  togglePriceLock: (itemId: string) => {
+  setAllCartItemsSelected: (selected: boolean) => {
+    const { cartItems } = get();
+    set({
+      cartItems: cartItems.map(item => ({ ...item, isSelected: selected }))
+    });
+    get().saveCurrentState();
+  },
+
+  // Locks the item at the price the shopper sees right now. Previously the lock
+  // only stored a timestamp and never the price, so locking had no effect.
+  // An expired lock is refreshed instead of being turned off.
+  togglePriceLock: (itemId: string, currentPrice: number) => {
     const { cartItems } = get();
     set({
       cartItems: cartItems.map(item => {
-        if (item.id === itemId) {
-          if (item.priceLocked) {
-            return { ...item, priceLocked: false, lockedPrice: undefined, lockedTimestamp: undefined };
-          } else {
-            return { ...item, priceLocked: true, lockedTimestamp: Date.now() };
-          }
+        if (item.id !== itemId) return item;
+        const lockStillValid =
+          item.priceLocked && item.lockedTimestamp !== undefined && isPriceLockValid(item.lockedTimestamp);
+        if (lockStillValid) {
+          return { ...item, priceLocked: false, lockedPrice: undefined, lockedTimestamp: undefined };
         }
-        return item;
+        return { ...item, priceLocked: true, lockedPrice: currentPrice, lockedTimestamp: Date.now() };
       })
     });
     get().saveCurrentState();
+  },
+
+  // Split checkout: only the selected items are "purchased" and removed from
+  // the cart. Unselected items stay in the cart for later.
+  checkoutSelectedItems: () => {
+    const { cartItems } = get();
+    const purchased = cartItems.filter(item => item.isSelected);
+    set({
+      cartItems: cartItems.filter(item => !item.isSelected)
+    });
+    get().saveCurrentState();
+    return purchased;
   },
 
   createFolder: (name: string) => {
@@ -226,9 +250,6 @@ export const useStore = create<StoreState>((set, get) => ({
 
 // Initialize store on app load
 export const initializeStore = () => {
-  // Only initialize in browser environment
-  if (typeof window === 'undefined') return;
-  
   const username = getCurrentUsername();
   if (username) {
     const store = useStore.getState();
