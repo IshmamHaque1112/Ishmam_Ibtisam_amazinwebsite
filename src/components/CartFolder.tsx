@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { CartFolder as CartFolderType, CartItem, Product, Seller } from '../types';
+import { CartFolder as CartFolderType, CartItem as CartItemType, Product, Seller } from '../types';
 import { useStore } from '../context/store';
 import CartItem from './CartItem';
+import { formatMoney, getLineTotal, pluralizeItems } from '../utils/cartPricing';
 
 interface CartFolderProps {
   folder: CartFolderType;
-  items: CartItem[];
+  items: CartItemType[];
   products: Product[];
   sellers: Seller[];
 }
@@ -14,17 +15,16 @@ const CartFolder: React.FC<CartFolderProps> = ({ folder, items, products, seller
   const { deleteFolder } = useStore();
   const [isExpanded, setIsExpanded] = useState(true);
 
+  // Uses the shared cart pricing so folder subtotals match the order summary
+  // (including price lock expiry).
   const folderSubtotal = items.reduce((sum, item) => {
     if (!item.isSelected) return sum;
     const product = products.find(p => p.id === item.productId);
     if (!product) return sum;
-    
-    const effectivePrice = item.priceLocked && item.lockedPrice
-      ? Math.min(item.lockedPrice, product.currentPrice)
-      : product.currentPrice;
-    
-    return sum + (effectivePrice * item.quantity);
+    return sum + getLineTotal(item, product);
   }, 0);
+
+  const folderQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <div className="border rounded-lg mb-4 overflow-hidden">
@@ -38,11 +38,11 @@ const CartFolder: React.FC<CartFolderProps> = ({ folder, items, products, seller
             {isExpanded ? '▼' : '▶'}
           </span>
           <h3 className="font-semibold text-gray-900">{folder.name}</h3>
-          <span className="text-sm text-gray-500">({items.length} items)</span>
+          <span className="text-sm text-gray-500">({pluralizeItems(folderQuantity)})</span>
         </div>
         <div className="flex items-center space-x-4">
           <span className="font-bold text-gray-900">
-            Subtotal: ${folderSubtotal.toFixed(2)}
+            Subtotal: {formatMoney(folderSubtotal)}
           </span>
           <button
             onClick={(e) => {
@@ -68,7 +68,7 @@ const CartFolder: React.FC<CartFolderProps> = ({ folder, items, products, seller
               const product = products.find(p => p.id === item.productId);
               const seller = sellers.find(s => s.id === item.sellerId);
               if (!product || !seller) return null;
-              
+
               return (
                 <CartItem
                   key={item.id}
