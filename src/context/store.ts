@@ -1,102 +1,84 @@
 import { create } from 'zustand';
-import { CartItem, CartFolder, Product, Seller } from '../types';
-import { 
-  getCurrentUsername, 
-  setCurrentUsername, 
+import { CartItem, CartFolder, Product } from '../types';
+import {
+  getCurrentUsername,
+  setCurrentUsername,
   clearCurrentUsername,
   getOrCreateUserData,
-  saveUserData,
-  getAllUsernames,
-  deleteUserData
+  saveUserData
 } from '../utils/storage';
+import { isPriceLockValid } from '../utils/ratingCalculations';
 
 interface StoreState {
   username: string | null;
   cartItems: CartItem[];
   cartFolders: CartFolder[];
-  currentView: 'products' | 'cart';
-  loginModalOpen: boolean;
-  
-  // Actions
-  setUsername: (username: string) => void;
+
+  // Session
+  login: (username: string) => void;
   logout: () => void;
-  switchUser: (username: string) => void;
-  addToCart: (product: Product, seller: Seller, folderId?: string) => void;
+
+  // Cart
+  addToCart: (product: Product, folderId?: string, quantity?: number) => void;
   removeFromCart: (itemId: string) => void;
   updateCartItemQuantity: (itemId: string, quantity: number) => void;
   toggleCartItemSelection: (itemId: string) => void;
-  togglePriceLock: (itemId: string) => void;
-  createFolder: (name: string) => void;
+  setAllCartItemsSelected: (selected: boolean) => void;
+  togglePriceLock: (itemId: string, currentPrice: number) => void;
+  checkoutSelectedItems: () => CartItem[];
+
+  // Folders
+  createFolder: (name: string) => string;
   deleteFolder: (folderId: string) => void;
   moveItemToFolder: (itemId: string, folderId: string | undefined) => void;
-  setCurrentView: (view: 'products' | 'cart') => void;
-  setLoginModalOpen: (open: boolean) => void;
-  loadUserData: (username: string) => void;
+
   saveCurrentState: () => void;
-  getAvailableUsers: () => string[];
 }
 
-export const useStore = create<StoreState>((set, get) => ({
-  username: getCurrentUsername(),
-  cartItems: [],
-  cartFolders: [],
-  currentView: 'products',
-  loginModalOpen: getCurrentUsername() === null,
+const loadCart = (username: string | null) => {
+  if (!username) return { cartItems: [], cartFolders: [] };
+  const data = getOrCreateUserData(username);
+  return { cartItems: data.cart.items, cartFolders: data.cart.folders };
+};
 
-  setUsername: (username: string) => {
+const initialUsername = typeof window !== 'undefined' ? getCurrentUsername() : null;
+
+export const useStore = create<StoreState>((set, get) => ({
+  username: initialUsername,
+  ...loadCart(initialUsername),
+
+  login: (username: string) => {
     setCurrentUsername(username);
-    const userData = getOrCreateUserData(username);
-    set({
-      username,
-      cartItems: userData.cart.items,
-      cartFolders: userData.cart.folders,
-      loginModalOpen: false
-    });
+    set({ username, ...loadCart(username) });
   },
 
   logout: () => {
-    const { username } = get();
-    if (username) {
-      // Save current state before logging out
-      get().saveCurrentState();
-    }
+    get().saveCurrentState();
     clearCurrentUsername();
-    set({
-      username: null,
-      cartItems: [],
-      cartFolders: [],
-      loginModalOpen: true
-    });
+    set({ username: null, cartItems: [], cartFolders: [] });
   },
 
-  switchUser: (username: string) => {
-    const { saveCurrentState } = get();
-    saveCurrentState();
-    get().setUsername(username);
-  },
+  // Guests can browse, but the cart belongs to a logged-in user.
+  addToCart: (product: Product, folderId?: string, quantity = 1) => {
+    const { cartItems, username } = get();
+    if (!username) return;
 
-  addToCart: (product: Product, seller: Seller, folderId?: string) => {
-    const { cartItems } = get();
-    
-    // Check if item already exists in cart
     const existingItem = cartItems.find(
-      item => item.productId === product.id && item.sellerId === seller.id && item.folderId === folderId
+      item => item.productId === product.id && item.sellerId === product.sellerId && item.folderId === folderId
     );
 
     if (existingItem) {
       set({
         cartItems: cartItems.map(item =>
-          item.id === existingItem.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
+          item.id === existingItem.id ? { ...item, quantity: item.quantity + quantity } : item
         )
       });
     } else {
       const newItem: CartItem = {
-        id: `${product.id}-${seller.id}-${Date.now()}`,
+        id: `${product.id}-${product.sellerId}-${Date.now()}`,
         productId: product.id,
-        sellerId: seller.id,
-        quantity: 1,
+        sellerId: product.sellerId,
+        quantity,
         folderId,
         isSelected: true,
         priceLocked: false,
@@ -104,136 +86,92 @@ export const useStore = create<StoreState>((set, get) => ({
       };
       set({ cartItems: [...cartItems, newItem] });
     }
-    
     get().saveCurrentState();
   },
 
   removeFromCart: (itemId: string) => {
-    const { cartItems } = get();
-    set({
-      cartItems: cartItems.filter(item => item.id !== itemId)
-    });
+    set({ cartItems: get().cartItems.filter(item => item.id !== itemId) });
     get().saveCurrentState();
   },
 
   updateCartItemQuantity: (itemId: string, quantity: number) => {
-    const { cartItems } = get();
     if (quantity <= 0) {
       get().removeFromCart(itemId);
       return;
     }
     set({
-      cartItems: cartItems.map(item =>
-        item.id === itemId ? { ...item, quantity } : item
-      )
+      cartItems: get().cartItems.map(item => (item.id === itemId ? { ...item, quantity } : item))
     });
     get().saveCurrentState();
   },
 
   toggleCartItemSelection: (itemId: string) => {
-    const { cartItems } = get();
     set({
-      cartItems: cartItems.map(item =>
+      cartItems: get().cartItems.map(item =>
         item.id === itemId ? { ...item, isSelected: !item.isSelected } : item
       )
     });
     get().saveCurrentState();
   },
 
-  togglePriceLock: (itemId: string) => {
-    const { cartItems } = get();
+  setAllCartItemsSelected: (selected: boolean) => {
+    set({ cartItems: get().cartItems.map(item => ({ ...item, isSelected: selected })) });
+    get().saveCurrentState();
+  },
+
+  // Locks the item at the price the shopper sees right now. An expired lock is
+  // refreshed instead of being turned off.
+  togglePriceLock: (itemId: string, currentPrice: number) => {
     set({
-      cartItems: cartItems.map(item => {
-        if (item.id === itemId) {
-          if (item.priceLocked) {
-            return { ...item, priceLocked: false, lockedPrice: undefined, lockedTimestamp: undefined };
-          } else {
-            return { ...item, priceLocked: true, lockedTimestamp: Date.now() };
-          }
+      cartItems: get().cartItems.map(item => {
+        if (item.id !== itemId) return item;
+        const lockStillValid =
+          item.priceLocked && item.lockedTimestamp !== undefined && isPriceLockValid(item.lockedTimestamp);
+        if (lockStillValid) {
+          return { ...item, priceLocked: false, lockedPrice: undefined, lockedTimestamp: undefined };
         }
-        return item;
+        return { ...item, priceLocked: true, lockedPrice: currentPrice, lockedTimestamp: Date.now() };
       })
     });
     get().saveCurrentState();
   },
 
-  createFolder: (name: string) => {
-    const { cartFolders } = get();
-    const newFolder: CartFolder = {
-      id: `folder-${Date.now()}`,
-      name,
-      createdAt: Date.now()
-    };
-    set({ cartFolders: [...cartFolders, newFolder] });
+  // Split checkout: only the selected items are purchased and removed.
+  checkoutSelectedItems: () => {
+    const { cartItems } = get();
+    const purchased = cartItems.filter(item => item.isSelected);
+    set({ cartItems: cartItems.filter(item => !item.isSelected) });
     get().saveCurrentState();
+    return purchased;
+  },
+
+  createFolder: (name: string) => {
+    const folder: CartFolder = { id: `folder-${Date.now()}`, name, createdAt: Date.now() };
+    set({ cartFolders: [...get().cartFolders, folder] });
+    get().saveCurrentState();
+    return folder.id;
   },
 
   deleteFolder: (folderId: string) => {
     const { cartFolders, cartItems } = get();
     set({
       cartFolders: cartFolders.filter(folder => folder.id !== folderId),
-      cartItems: cartItems.map(item =>
-        item.folderId === folderId ? { ...item, folderId: undefined } : item
-      )
+      cartItems: cartItems.map(item => (item.folderId === folderId ? { ...item, folderId: undefined } : item))
     });
     get().saveCurrentState();
   },
 
   moveItemToFolder: (itemId: string, folderId: string | undefined) => {
-    const { cartItems } = get();
     set({
-      cartItems: cartItems.map(item =>
-        item.id === itemId ? { ...item, folderId } : item
-      )
+      cartItems: get().cartItems.map(item => (item.id === itemId ? { ...item, folderId } : item))
     });
     get().saveCurrentState();
-  },
-
-  setCurrentView: (view: 'products' | 'cart') => {
-    set({ currentView: view });
-  },
-
-  setLoginModalOpen: (open: boolean) => {
-    set({ loginModalOpen: open });
-  },
-
-  loadUserData: (username: string) => {
-    const userData = getOrCreateUserData(username);
-    set({
-      username,
-      cartItems: userData.cart.items,
-      cartFolders: userData.cart.folders
-    });
   },
 
   saveCurrentState: () => {
     const { username, cartItems, cartFolders } = get();
     if (username) {
-      saveUserData(username, {
-        username,
-        cart: {
-          items: cartItems,
-          folders: cartFolders
-        }
-      });
+      saveUserData(username, { username, cart: { items: cartItems, folders: cartFolders } });
     }
-  },
-
-  getAvailableUsers: () => {
-    return getAllUsernames();
   }
 }));
-
-// Initialize store on app load
-export const initializeStore = () => {
-  // Only initialize in browser environment
-  if (typeof window === 'undefined') return;
-  
-  const username = getCurrentUsername();
-  if (username) {
-    const store = useStore.getState();
-    store.loadUserData(username);
-  } else {
-    useStore.setState({ loginModalOpen: true });
-  }
-};
