@@ -1,170 +1,85 @@
 # Amazin - Transparent Shopping Platform
 
-A modern, transparent marketplace web app with advanced cart management, dynamic pricing, and quality ratings.
+A functional, Amazon-style digital marketplace that puts price history, seller details and quality ratings in front of shoppers.
 
-## 🚀 Features
+## Features
 
-### 🔐 Username-Only Authentication
-- Simple username-based login system (no password required)
-- All cart data, custom folders, and price locks are scoped to username
-- Session-based authentication with localStorage persistence
-- Easy user switching between multiple accounts
+### Store layout
+- **Top bar:** the logo and the cursive **Amazin** brand name on the left. **Products** and **3rd party sellers** sit in the middle. The right side has three icons:
+  - 🔍 **Search** opens a search bar under the top bar.
+  - 🔑 **Login** opens the username login page.
+  - 🛒 **Cart** opens your cart. Guests are asked to log in first.
+- **Products page:** a scrollable list of every product showing its category, rating, price, all-time low and seller. Click a product name to open its page.
+- **Product page:** today's price next to the all-time low and 30-day high, a deal score, the Amazin product score, and seller details.
+- **3rd party sellers page:** a scrollable list of sellers showing rating, years active, source of supply, return policy and price-lock eligibility. Click a seller name to open their page.
+- **Seller page:** price, quality and delivery ratings, plus every product that seller sells.
+- **Search:** search by words (product name, category or seller name), price range, category and 3rd party seller. The results page scrolls, and shows **"Products cannot be found"** when nothing matches.
 
-### 📁 Custom Cart Folders
-- Create custom-named cart folders (e.g., "Pantry", "School Supplies")
-- Organize cart items into collapsible folder groups
-- Folder-level subtotals for better budget management
-- Move items between folders or remove folder organization
+### Accounts and guests
+- **Guests can browse everything.** A username login is needed only to add to cart or view the cart.
+- **Log in** with an existing username from `customers.csv` (for example `ava.nguyen`).
+- **Register** a new account with a username and display name. New accounts are added to the SQLite `customers` table and kept in the browser, so they are still there after a reload.
+- Usernames are checked (3-30 characters: letters, numbers, `.`, `-`, `_`). No passwords are used in this prototype.
 
-### 🛒 Split Checkout System
-- Select individual cart items with checkboxes
-- Dynamic "Active Subtotal" based on selected items only
-- Itemized charges breakdown:
-  - Active Subtotal
-  - Est. Tax (8.875%)
-  - Est. Shipping (FREE for orders ≥$35, otherwise $5.99)
-  - Grand Total calculation
+### Cart
+- Custom cart folders, split checkout (only selected items are checked out), and select/deselect all.
+- Free-shipping progress bar (free at $35+) and 8.875% estimated tax.
+- **Price lock (24h)**, offered only for items from sellers marked `price_lock_eligible` in `sellers.csv`.
+- Carts are saved per username in `localStorage`.
 
-### 📊 Dual Dynamic Rating Systems
+## Data: SQLite in the browser
 
-#### Product Dynamic Rating (0-100)
-- **Factors:**
-  - Base customer rating (0-5 stars)
-  - 30-day price stability analysis
-  - Quality score from recent user feedback
-  - Return rate impact
-- **Badges:** "🔥 High Value & Top Quality", "📈 Price Spiked", "✨ Good Value", etc.
+The datasets live in `src/data/`:
 
-#### Seller Dynamic Rating (0-100)
-- **Factors:**
-  - Price competitiveness vs. catalog average
-  - Seller quality score
-  - Delivery speed rating
-- **Badges:** "🔥 Top Value", "⚠️ Cheap but Risky", "👍 Good Choice", etc.
+| File | Table | Rows |
+|---|---|---|
+| `products.csv` | `products` | 25 |
+| `sellers.csv` | `sellers` | 25 |
+| `customers.csv` | `customers` | 25 + newly registered |
 
-### 🔒 24-Hour Price Lock
-- Lock current unit price for 24 hours with one click
-- Live countdown timer showing remaining lock time
-- Automatic price adjustment if catalog price drops
-- Visual indicators for locked vs. unlocked items
+On page load, `src/db/database.ts` starts **SQLite** in the browser with [sql.js](https://github.com/sql-js/sql.js) (SQLite compiled to WebAssembly), creates the tables, and seeds them from the CSVs. Every page reads through SQL queries with bound parameters, so search input is never pasted into SQL.
 
-## 🛠️ Tech Stack
+To change the catalog, edit the CSV files and redeploy.
 
-- **Framework:** React 18+ with TypeScript
-- **Styling:** Tailwind CSS
-- **State Management:** Zustand with localStorage persistence
-- **Build Tool:** Vite
-- **Hosting:** Vercel-ready
+> Because Vercel hosts this as a static site, the database runs in each visitor's browser. Registered accounts are stored per browser. A shared server database would be the next step for real multi-user accounts.
 
-## 📦 Installation
+## Scores
+
+- **Seller score (0-100):** price 35%, quality 40%, delivery 25% (from `sellers.csv`).
+- **Product score (0-100):** customer rating 50%, deal score 30%, seller score 20%.
+- **Deal score:** 100 means today's price is at the all-time low; 0 means it is at or above the 30-day high.
+
+## Tech stack
+- React 18 + TypeScript, Vite, Tailwind CSS
+- Zustand for the session and cart
+- sql.js (SQLite/WASM) for the catalog and customers
+- Hash routing (`#/products`, `#/product/P001`, `#/sellers`, `#/seller/S003`, `#/search?...`, `#/login`, `#/cart`), which works on Vercel with no rewrite rules
+
+## Getting started
 
 ```bash
-# Install dependencies
 npm install
-
-# Run development server
-npm run dev
-
-# Build for production
+npm run dev      # http://localhost:3000
 npm run build
-
-# Preview production build
 npm run preview
 ```
 
-## 🚀 Deployment to Vercel
-
-1. Push your code to GitHub
-2. Import project in Vercel
-3. Vercel will automatically detect the Vite configuration
-4. Deploy with default settings
-
-The `vercel.json` configuration file is included for optimal Vercel deployment.
-
-## 📁 Project Structure
+## Project structure
 
 ```
 src/
-├── components/          # React components
-│   ├── CartItem.tsx    # Individual cart item with price lock
-│   ├── CartFolder.tsx  # Collapsible folder groups
-│   ├── CartView.tsx    # Main cart with split checkout
-│   ├── Header.tsx      # Navigation and user menu
-│   ├── LoginModal.tsx  # Username-only authentication
-│   ├── ProductCard.tsx # Product display with ratings
-│   └── ProductList.tsx # Product grid with filters
-├── context/            # State management
-│   └── store.ts        # Zustand store with localStorage
-├── data/               # Mock data
-│   └── mockData.ts     # Products, sellers, price history
-├── types/              # TypeScript types
-│   └── index.ts        # All type definitions
-├── utils/              # Utility functions
-│   ├── ratingCalculations.ts  # Rating algorithms
-│   └── storage.ts             # localStorage helpers
-├── App.tsx             # Main application component
-├── main.tsx            # Application entry point
-└── index.css           # Global styles
+├── data/            # products.csv, sellers.csv, customers.csv
+├── db/              # SQLite setup, CSV parser, React provider
+├── pages/           # Products, Product, Sellers, Seller, Search, Login, NotFound
+├── components/      # Header, SearchBar, ProductRow, AddToCart, Cart*, Icons
+├── context/store.ts # Session + cart (Zustand)
+├── utils/           # cart pricing, ratings, storage helpers
+├── router.ts        # tiny hash router
+└── App.tsx
 ```
 
-## 🎨 Key Features Explained
-
-### Username Scoping
-All user data is stored in localStorage with the pattern:
-```
-amazin_{username} → {
-  username: string,
-  cart: {
-    items: CartItem[],
-    folders: CartFolder[]
-  }
-}
-```
-
-### Price Lock Mechanism
-- Locks current price with timestamp
-- Countdown updates every minute
-- Automatically adjusts to lower catalog prices
-- Expires after 24 hours
-
-### Rating Calculations
-
-**Product Score Formula:**
-```
-Score = (BaseRating × 20) + (PriceStability × 0.25) + (QualityScore × 0.3) + (ReturnRateImpact × 0.25)
-```
-
-**Seller Score Formula:**
-```
-Score = (PriceCompetitiveness × 0.35) + (QualityScore × 0.4) + (DeliverySpeed × 0.25)
-```
-
-## 🧪 Mock Data
-
-The app includes 12 products with:
-- 30-day price history arrays
-- Quality ratings (0-100)
-- Return rates
-- Multiple 3rd-party sellers per product
-
-## 📱 Responsive Design
-
-Fully responsive layout that works on:
-- Desktop (4-column product grid)
-- Tablet (2-3 columns)
-- Mobile (1-2 columns)
-
-## 🔒 Security Notes
-
-- No sensitive data stored (username only)
-- Client-side only architecture
-- No API keys required
-- localStorage for persistence (not for sensitive data)
-
-## 📄 License
-
-This is a prototype project for educational purposes.
-
-## 🤝 Contributing
-
-This is a prototype project. Feel free to fork and modify for your own use cases.
+## Security notes
+- No API keys or secrets. `.env` is git-ignored.
+- All SQL uses bound parameters. LIKE wildcards in search text are escaped.
+- The post-login redirect only accepts in-app routes.
+- Prototype auth: usernames only, stored client-side. It is not suitable for real accounts or payments.
