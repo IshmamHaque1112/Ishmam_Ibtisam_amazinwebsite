@@ -1,112 +1,98 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/store';
+import { href, Route } from '../router';
+import { CartIcon, KeyIcon, SearchIcon } from './Icons';
+import SearchBar from './SearchBar';
 
-const Header: React.FC = () => {
-  const { username, logout, switchUser, currentView, setCurrentView, cartItems, getAvailableUsers } = useStore();
-  const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showSwitchUser, setShowSwitchUser] = useState(false);
+interface HeaderProps {
+  route: Route;
+}
 
-  const selectedItemsCount = cartItems.filter(item => item.isSelected).length;
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+const Header: React.FC<HeaderProps> = ({ route }) => {
+  const { username, cartItems } = useStore();
+  const [searchOpen, setSearchOpen] = useState(route.name === 'search');
 
-  const handleSwitchUser = (selectedUsername: string) => {
-    switchUser(selectedUsername);
-    setShowSwitchUser(false);
-    setShowUserMenu(false);
-  };
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const navLink = (label: string, to: string, active: boolean) => (
+    <a
+      href={to}
+      className={`px-3 py-2 rounded text-sm font-medium hover:text-amazin-orange ${
+        active ? 'text-amazin-orange' : 'text-gray-200'
+      }`}
+      aria-current={active ? 'page' : undefined}
+    >
+      {label}
+    </a>
+  );
+
+  const iconButton = 'p-2 rounded hover:bg-white/10 hover:text-amazin-orange relative';
 
   return (
-    <header className="bg-amazin-dark text-white">
-      <div className="max-w-7xl mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center space-x-2">
-            <div className="text-2xl font-bold text-amazin-orange">amazin</div>
-          </div>
+    <header className="sticky top-0 z-40">
+      <div className="bg-amazin-dark text-white">
+        <div className="max-w-7xl mx-auto px-4 py-2 md:h-16 flex flex-wrap md:grid md:grid-cols-[1fr_auto_1fr] items-center justify-between gap-x-2 gap-y-1">
+          {/* Left: logo + brand */}
+          <a href={href.products()} className="flex items-center gap-2 justify-self-start" aria-label="Amazin home">
+            <span className="w-9 h-9 rounded-full bg-amazin-orange text-amazin-dark font-bold flex items-center justify-center">
+              a
+            </span>
+            <span className="brand-cursive text-2xl text-white">Amazin</span>
+          </a>
 
-          {/* Navigation */}
-          <nav className="flex items-center space-x-6">
-            <button
-              onClick={() => setCurrentView('products')}
-              className={`text-sm hover:text-amazin-orange transition-colors ${
-                currentView === 'products' ? 'text-amazin-orange font-semibold' : 'text-gray-300'
-              }`}
-            >
-              Products
-            </button>
-            <button
-              onClick={() => setCurrentView('cart')}
-              className={`text-sm hover:text-amazin-orange transition-colors flex items-center ${
-                currentView === 'cart' ? 'text-amazin-orange font-semibold' : 'text-gray-300'
-              }`}
-            >
-              Cart
-              {selectedItemsCount > 0 && (
-                <span className="ml-2 bg-amazin-orange text-white text-xs px-2 py-1 rounded-full">
-                  {selectedItemsCount}
-                </span>
-              )}
-            </button>
+          {/* Middle: main sections */}
+          <nav className="order-last md:order-none w-full md:w-auto flex items-center justify-center gap-1" aria-label="Main">
+            {navLink('Products', href.products(), route.name === 'products' || route.name === 'product')}
+            {navLink('3rd party sellers', href.sellers(), route.name === 'sellers' || route.name === 'seller')}
           </nav>
 
-          {/* User Section */}
-          <div className="relative">
+          {/* Right: search, login, cart */}
+          <div className="flex items-center gap-1 justify-self-end">
             <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-2 text-sm hover:text-amazin-orange transition-colors"
+              type="button"
+              className={`${iconButton} ${searchOpen ? 'text-amazin-orange' : ''}`}
+              onClick={() => setSearchOpen(open => !open)}
+              aria-label={searchOpen ? 'Hide search' : 'Search products'}
+              aria-expanded={searchOpen}
+              title="Search"
             >
-              <div className="text-right">
-                <div className="text-xs text-gray-400">Hello, {username || 'Guest'}</div>
-                <div className="font-semibold">Account & Lists</div>
-              </div>
-              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                <span className="text-lg">👤</span>
-              </div>
+              <SearchIcon />
             </button>
 
-            {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl text-gray-900 z-50">
-                <div className="p-4 border-b">
-                  <div className="font-semibold">Logged in as {username}</div>
-                  <div className="text-sm text-gray-500">{totalItems} items in cart</div>
-                </div>
-                <div className="p-2">
-                  <button
-                    onClick={() => {
-                      setShowSwitchUser(!showSwitchUser);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md transition-colors text-sm"
-                  >
-                    Switch User
-                  </button>
-                  {showSwitchUser && (
-                    <div className="mt-2 pl-4 border-l-2 border-gray-200">
-                      {getAvailableUsers().filter(u => u !== username).map((user) => (
-                        <button
-                          key={user}
-                          onClick={() => handleSwitchUser(user)}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md transition-colors text-sm text-gray-600"
-                        >
-                          {user}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      logout();
-                      setShowUserMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md transition-colors text-sm text-red-600"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            )}
+            <a
+              href={href.login()}
+              className={`${iconButton} flex items-center gap-1`}
+              aria-label={username ? `Account: ${username}` : 'Log in'}
+              title={username ? `Logged in as ${username}` : 'Log in'}
+            >
+              <KeyIcon />
+              {username && (
+                <span className="hidden sm:inline text-xs text-gray-300 max-w-[120px] truncate">{username}</span>
+              )}
+            </a>
+
+            <a
+              href={username ? href.cart() : href.login(href.cart())}
+              className={iconButton}
+              aria-label={`Cart, ${cartCount} items`}
+              title="Cart"
+            >
+              <CartIcon />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-amazin-orange text-amazin-dark text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </a>
           </div>
         </div>
       </div>
+
+      {searchOpen && (
+        <SearchBar
+          initial={route.name === 'search' ? route.params : undefined}
+        />
+      )}
     </header>
   );
 };
