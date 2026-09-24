@@ -1,0 +1,26 @@
+product_id,product_name,category,current_price,all_time_low_price,thirty_day_high_price,store_recommended,product_rating,seller_id,seller_name
+P001,Organic Cane Sugar (5lb Bag),Groceries,5.62,5.08,6.17,No,2.7,S014,Ironclad Hardware Co.
+P002,Classic Italian Cookbook,Groceries,16.45,12.98,17.35,Yes,4.2,S024,Steel Horizon Auto Parts
+P003,Vanilla Cake Mix Box,Groceries,3.17,2.53,3.19,No,3.0,S004,Pinecone Goods
+P004,No. 2 Pencils (30-Pack),School Supplies,7.17,6.66,7.27,Yes,3.6,S008,Glacier Bay Outfitters
+P005,Wide-Ruled Composition Notebook,School Supplies,3.27,2.3,3.33,Yes,4.8,S001,Northwind Traders
+P006,Backpack with Laptop Sleeve,School Supplies,33.93,25.85,38.75,Yes,2.9,S013,Coral Reef Imports
+P007,Children's Fever Reducer Syrup,Medicine,11.04,9.17,12.66,No,3.6,S015,Maplewood Provisions
+P008,Allergy Relief Tablets (60ct),Medicine,9.51,6.59,9.92,No,4.3,S002,BlueCrate Supply Co.
+P009,Digital Thermometer,Medicine,10.45,9.56,10.93,No,2.9,S017,Driftwood Furnishings
+P010,Non-Stick Frying Pan 10-inch,Kitchenware,40.04,35.87,43.53,No,3.5,S003,Everstock Wholesale
+P011,Stainless Steel Mixing Bowl Set,Kitchenware,39.17,32.84,42.39,Yes,4.1,S003,Everstock Wholesale
+P012,6-Slice Toaster Oven,Appliances,38.45,35.84,39.64,No,3.1,S023,Foxglove Botanicals
+P013,Robot Vacuum Cleaner,Appliances,312.71,256.96,327.45,Yes,3.6,S003,Everstock Wholesale
+P014,Cordless Leaf Blower,Outdoor & Garden,95.84,78.02,100.15,No,4.8,S009,Ember & Oak Trading
+P015,"Garden Rake, Steel Head",Outdoor & Garden,24.71,18.29,25.61,No,4.0,S018,Granite Peak Tools
+P016,Settlers Strategy Board Game,Tabletop Games,46.49,36.84,52.59,Yes,4.8,S022,Anchor Point Marine
+P017,Cooperative Dungeon Crawler Game,Tabletop Games,61.88,53.44,70.98,No,3.2,S005,Harbor & Vine Imports
+P018,Wireless Noise-Cancelling Headphones,Electronics,87.34,72.02,97.26,No,3.7,S009,Ember & Oak Trading
+P019,USB-C Fast Charging Cable (6ft),Electronics,7.37,5.92,7.41,Yes,2.5,S009,Ember & Oak Trading
+P020,4K Streaming Media Player,Electronics,49.05,35.35,53.27,Yes,3.9,S023,Foxglove Botanicals
+P021,Ceramic Table Lamp,Home Decor,50.89,43.56,56.2,No,2.9,S019,Sunburst Organics
+P022,Set of 4 Throw Pillow Covers,Home Decor,25.1,19.48,26.82,No,3.0,S002,BlueCrate Supply Co.
+P023,"Synthetic Motor Oil, 5-Quart",Auto Parts,35.44,23.62,37.96,No,4.4,S014,Ironclad Hardware Co.
+P024,All-Season Windshield Wipers,Auto Parts,23.96,22.33,26.48,Yes,2.6,S006,Redwood Mercantile
+P025,Reusable Silicone Food Storage Bags,Groceries,19.77,12.89,22.21,No,3.2,S022,Anchor Point Marine
