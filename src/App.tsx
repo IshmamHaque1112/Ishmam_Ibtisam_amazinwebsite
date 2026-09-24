@@ -1,44 +1,50 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import { DbProvider } from './db/DbProvider';
 import { useStore } from './context/store';
-import { initializeStore } from './context/store';
+import { href, useRoute } from './router';
 import Header from './components/Header';
-import LoginModal from './components/LoginModal';
-import ProductList from './components/ProductList';
 import CartView from './components/CartView';
+import ProductsPage from './pages/ProductsPage';
+import ProductPage from './pages/ProductPage';
+import SellersPage from './pages/SellersPage';
+import SellerPage from './pages/SellerPage';
+import SearchPage from './pages/SearchPage';
+import LoginPage from './pages/LoginPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
-  const { currentView, username } = useStore();
+  const route = useRoute();
+  const { username } = useStore();
 
-  useEffect(() => {
-    // Only initialize in browser environment
-    if (typeof window !== 'undefined') {
-      initializeStore();
+  const page = (() => {
+    switch (route.name) {
+      case 'products':
+        return <ProductsPage />;
+      case 'product':
+        return <ProductPage key={route.id} id={route.id} />;
+      case 'sellers':
+        return <SellersPage />;
+      case 'seller':
+        return <SellerPage key={route.id} id={route.id} />;
+      case 'search':
+        return <SearchPage params={route.params} />;
+      case 'login':
+        return <LoginPage key={route.params.toString()} params={route.params} />;
+      case 'cart':
+        // The cart belongs to a logged-in user; guests are sent to log in first.
+        return username ? <CartView /> : <LoginPage params={new URLSearchParams({ next: href.cart() })} />;
+      default:
+        return <NotFoundPage />;
     }
-  }, []);
+  })();
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <LoginModal />
-      {username && <Header />}
-      
-      <main className={username ? '' : 'pt-8'}>
-        {username ? (
-          currentView === 'products' ? (
-            <ProductList />
-          ) : (
-            <CartView />
-          )
-        ) : (
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <div className="text-center">
-              <div className="text-6xl mb-4">🛒</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Amazin</h2>
-              <p className="text-gray-600">Please log in to start shopping</p>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+    <DbProvider>
+      <div className="min-h-screen bg-gray-100">
+        <Header route={route} />
+        <main>{page}</main>
+      </div>
+    </DbProvider>
   );
 }
 

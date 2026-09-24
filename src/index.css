@@ -8,6 +8,11 @@
   }
 }
 
+.brand-cursive {
+  font-family: 'Pacifico', 'Brush Script MT', 'Segoe Script', cursive;
+  line-height: 1.2;
+}
+
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
