@@ -82,6 +82,11 @@ export const calculateCartTotals = (items: CartItem[], products: Product[]): Car
   };
 };
 
+// Totals for checking out a single folder: every item in it is bought,
+// whether or not it's ticked in the main cart.
+export const calculateGroupTotals = (items: CartItem[], products: Product[]): CartTotals =>
+  calculateCartTotals(items.map(item => ({ ...item, isSelected: true })), products);
+
 export const formatMoney = (value: number): string => `$${value.toFixed(2)}`;
 
 export const pluralizeItems = (count: number): string => `${count} ${count === 1 ? 'item' : 'items'}`;
