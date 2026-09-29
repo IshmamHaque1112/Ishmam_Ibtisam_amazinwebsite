@@ -24,6 +24,7 @@ export interface Seller {
   deliveryTimeRating: number; // 0-5
   overallRating: number; // 0-5
   priceLockEligible: boolean;
+  blurb?: string;
 }
 
 export interface Customer {
@@ -33,6 +34,7 @@ export interface Customer {
   joinDate: string;
   accountType: string;
   favoriteCategory: string | null;
+  password: string;
 }
 
 export interface ProductSearch {

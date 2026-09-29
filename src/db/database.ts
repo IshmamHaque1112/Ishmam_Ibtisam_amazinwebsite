@@ -3,6 +3,7 @@ import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import productsCsv from '../data/products.csv?raw';
 import sellersCsv from '../data/sellers.csv?raw';
 import customersCsv from '../data/customers.csv?raw';
+import sellerBlurbsCsv from '../data/seller_blurbs.csv?raw';
 import { parseCsv } from './csv';
 import { Customer, Product, ProductSearch, Seller } from '../types';
 
@@ -23,7 +24,8 @@ const SCHEMA = `
     quality_rating REAL,
     delivery_time_rating REAL,
     overall_rating REAL,
-    price_lock_eligible INTEGER NOT NULL DEFAULT 0
+    price_lock_eligible INTEGER NOT NULL DEFAULT 0,
+    blurb TEXT
   );
   CREATE TABLE products (
     product_id TEXT PRIMARY KEY,
@@ -45,7 +47,8 @@ const SCHEMA = `
     account_type TEXT NOT NULL DEFAULT 'New',
     favorite_category TEXT,
     avg_cart_size INTEGER,
-    has_left_seller_ratings INTEGER NOT NULL DEFAULT 0
+    has_left_seller_ratings INTEGER NOT NULL DEFAULT 0,
+    password TEXT NOT NULL
   );
   CREATE INDEX idx_products_category ON products(category);
   CREATE INDEX idx_products_seller ON products(seller_id);
@@ -54,11 +57,23 @@ const SCHEMA = `
 const yes = (value: string) => (value.toLowerCase() === 'yes' ? 1 : 0);
 const num = (value: string) => (value === '' ? null : Number(value));
 
+// Generate random password between 10-15 characters
+const generatePassword = (): string => {
+  const length = Math.floor(Math.random() * 6) + 10; // 10-15 characters
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
 interface RegisteredCustomer {
   id: string;
   username: string;
   displayName: string;
   joinDate: string;
+  password: string;
 }
 
 const readRegistered = (): RegisteredCustomer[] => {
@@ -79,15 +94,23 @@ const writeRegistered = (list: RegisteredCustomer[]) => {
 
 const seed = (db: Database) => {
   db.run('BEGIN');
-  const sellerStmt = db.prepare('INSERT INTO sellers VALUES (?,?,?,?,?,?,?,?,?,?)');
+  const sellerStmt = db.prepare('INSERT INTO sellers VALUES (?,?,?,?,?,?,?,?,?,?,?)');
   for (const s of parseCsv(sellersCsv)) {
     sellerStmt.run([
       s.seller_id, s.seller_name, s.return_policy, s.source_of_supply, num(s.years_active),
       num(s.price_rating), num(s.quality_rating), num(s.delivery_time_rating), num(s.overall_rating),
-      yes(s.price_lock_eligible)
+      yes(s.price_lock_eligible), null
     ]);
   }
   sellerStmt.free();
+
+  // Load seller blurbs
+  const blurbsMap = new Map(parseCsv(sellerBlurbsCsv).map(b => [b.seller_id, b.blurb]));
+  const blurbStmt = db.prepare('UPDATE sellers SET blurb = ? WHERE seller_id = ?');
+  for (const [sellerId, blurb] of blurbsMap) {
+    blurbStmt.run([blurb, sellerId]);
+  }
+  blurbStmt.free();
 
   const productStmt = db.prepare('INSERT INTO products VALUES (?,?,?,?,?,?,?,?,?,?)');
   for (const p of parseCsv(productsCsv)) {
@@ -98,15 +121,16 @@ const seed = (db: Database) => {
   }
   productStmt.free();
 
-  const customerStmt = db.prepare('INSERT INTO customers VALUES (?,?,?,?,?,?,?,?)');
+  const customerStmt = db.prepare('INSERT INTO customers VALUES (?,?,?,?,?,?,?,?,?)');
   for (const c of parseCsv(customersCsv)) {
     customerStmt.run([
       c.customer_id, c.username, c.display_name, c.join_date, c.account_type,
-      c.favorite_category || null, num(c.avg_cart_size), yes(c.has_left_seller_ratings)
+      c.favorite_category || null, num(c.avg_cart_size), yes(c.has_left_seller_ratings),
+      generatePassword()
     ]);
   }
   for (const r of readRegistered()) {
-    customerStmt.run([r.id, r.username, r.displayName, r.joinDate, 'New', null, 0, 0]);
+    customerStmt.run([r.id, r.username, r.displayName, r.joinDate, 'New', null, 0, 0, r.password]);
   }
   customerStmt.free();
   db.run('COMMIT');
@@ -137,7 +161,8 @@ const toSeller = (r: Row): Seller => ({
   qualityRating: Number(r.quality_rating),
   deliveryTimeRating: Number(r.delivery_time_rating),
   overallRating: Number(r.overall_rating),
-  priceLockEligible: r.price_lock_eligible === 1
+  priceLockEligible: r.price_lock_eligible === 1,
+  blurb: r.blurb === null ? null : String(r.blurb)
 });
 
 const toCustomer = (r: Row): Customer => ({
@@ -146,7 +171,8 @@ const toCustomer = (r: Row): Customer => ({
   displayName: String(r.display_name),
   joinDate: String(r.join_date),
   accountType: String(r.account_type),
-  favoriteCategory: r.favorite_category === null ? null : String(r.favorite_category)
+  favoriteCategory: r.favorite_category === null ? null : String(r.favorite_category),
+  password: String(r.password)
 });
 
 // Usernames: 3-30 characters, letters, numbers, dots, dashes or underscores.
@@ -253,11 +279,12 @@ export class StoreDatabase {
     const count = Number(this.all('SELECT COUNT(*) AS n FROM customers')[0].n);
     const id = `C${String(count + 1).padStart(3, '0')}`;
     const joinDate = new Date().toISOString().slice(0, 10);
+    const password = generatePassword();
     this.db.run(
-      "INSERT INTO customers VALUES (?,?,?,?,'New',NULL,0,0)",
-      [id, name, display, joinDate]
+      "INSERT INTO customers VALUES (?,?,?,?,'New',NULL,0,0,?)",
+      [id, name, display, joinDate, password]
     );
-    writeRegistered([...readRegistered(), { id, username: name, displayName: display, joinDate }]);
+    writeRegistered([...readRegistered(), { id, username: name, displayName: display, joinDate, password }]);
     return { customer: this.findCustomer(name) };
   }
 }
