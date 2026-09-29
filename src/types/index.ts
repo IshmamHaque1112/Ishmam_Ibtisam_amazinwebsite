@@ -64,9 +64,18 @@ export interface CartFolder {
   createdAt: number;
 }
 
+// An item the shopper set aside with "Save for later". It keeps everything
+// from the cart line (quantity, folder, price lock) so moving it back to the
+// cart restores it as it was. Saved items never count toward totals.
+export interface SavedItem extends CartItem {
+  savedAt: number;
+  savedPrice: number; // catalog price when it was saved, to show price changes
+}
+
 export interface CartState {
   items: CartItem[];
   folders: CartFolder[];
+  saved?: SavedItem[]; // optional so carts saved before this feature still load
 }
 
 export interface UserSession {
