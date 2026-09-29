@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../context/store';
 import { useDb } from '../db/DbProvider';
 import { href } from '../router';
 import CartItem from './CartItem';
 import CartFolder from './CartFolder';
 import FreeShippingProgress from './FreeShippingProgress';
+import SavedForLater from './SavedForLater';
 import {
   TAX_RATE,
   FREE_SHIPPING_THRESHOLD,
   calculateCartTotals,
+  calculateGroupTotals,
   formatMoney,
   pluralizeItems
 } from '../utils/cartPricing';
@@ -17,21 +19,40 @@ interface OrderConfirmation {
   orderId: string;
   itemCount: number;
   grandTotal: number;
+  folderName?: string;
+}
+
+interface UndoSave {
+  savedId: string;
+  productName: string;
 }
 
 const CartView: React.FC = () => {
   const {
     cartItems,
     cartFolders,
+    savedItems,
     createFolder,
     setAllCartItemsSelected,
-    checkoutSelectedItems
+    checkoutSelectedItems,
+    checkoutItems,
+    moveSavedToCart
   } = useStore();
   const db = useDb();
   const products = db.getProducts();
   const sellers = db.getSellers();
   const [newFolderName, setNewFolderName] = useState('');
   const [confirmation, setConfirmation] = useState<OrderConfirmation | null>(null);
+  // When set, the order summary checks out only this folder.
+  const [checkoutFolderId, setCheckoutFolderId] = useState<string | null>(null);
+  const [undoSave, setUndoSave] = useState<UndoSave | null>(null);
+
+  // The Undo offer disappears after a few seconds.
+  useEffect(() => {
+    if (!undoSave) return;
+    const timer = setTimeout(() => setUndoSave(null), 8000);
+    return () => clearTimeout(timer);
+  }, [undoSave]);
 
   // Separate items into folders and unassigned
   const itemsByFolder = cartFolders.map(folder => ({
@@ -41,10 +62,33 @@ const CartView: React.FC = () => {
 
   const unassignedItems = cartItems.filter(item => !item.folderId);
 
-  const totals = calculateCartTotals(cartItems, products);
+  // Folder checkout reuses the order summary with only that folder's items.
+  // If the folder was deleted or emptied, fall back to the whole cart.
+  const checkoutFolder = cartFolders.find(folder => folder.id === checkoutFolderId);
+  const folderItems = checkoutFolder ? cartItems.filter(item => item.folderId === checkoutFolder.id) : [];
+  const folderMode = !!checkoutFolder && folderItems.length > 0;
+
+  const totals = folderMode ? calculateGroupTotals(folderItems, products) : calculateCartTotals(cartItems, products);
   const allSelected = cartItems.length > 0 && cartItems.every(item => item.isSelected);
   const canCheckout = totals.subtotal > 0;
-  const checkoutLabel = `Proceed to checkout (${pluralizeItems(totals.selectedQuantity)})`;
+  const checkoutLabel = folderMode
+    ? `Place order for ${checkoutFolder!.name} (${pluralizeItems(totals.selectedQuantity)})`
+    : `Proceed to checkout (${pluralizeItems(totals.selectedQuantity)})`;
+
+  const handleSavedForLater = (savedId: string, productName: string) => {
+    setUndoSave({ savedId, productName });
+  };
+
+  const handleUndoSave = () => {
+    if (undoSave) moveSavedToCart(undoSave.savedId);
+    setUndoSave(null);
+  };
+
+  const handleCheckoutFolder = (folderId: string) => {
+    setConfirmation(null);
+    setCheckoutFolderId(folderId);
+    document.getElementById('order-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const handleCreateFolder = () => {
     if (newFolderName.trim()) {
@@ -56,12 +100,18 @@ const CartView: React.FC = () => {
   const handleCheckout = () => {
     if (!canCheckout) return;
     const orderTotals = totals;
-    checkoutSelectedItems();
+    if (folderMode) {
+      checkoutItems(folderItems.map(item => item.id));
+    } else {
+      checkoutSelectedItems();
+    }
     setConfirmation({
       orderId: `AMZ-${Date.now().toString().slice(-8)}`,
       itemCount: orderTotals.selectedQuantity,
-      grandTotal: orderTotals.grandTotal
+      grandTotal: orderTotals.grandTotal,
+      folderName: folderMode ? checkoutFolder!.name : undefined
     });
+    setCheckoutFolderId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -72,7 +122,10 @@ const CartView: React.FC = () => {
       data-testid="order-confirmation"
     >
       <div>
-        <p className="font-bold">✅ Order placed! #{confirmation.orderId}</p>
+        <p className="font-bold">
+          ✅ Order placed! #{confirmation.orderId}
+          {confirmation.folderName && <span className="font-normal"> · folder “{confirmation.folderName}”</span>}
+        </p>
         <p className="text-sm">
           {pluralizeItems(confirmation.itemCount)} · Total charged {formatMoney(confirmation.grandTotal)} (demo order, no real payment)
         </p>
@@ -87,10 +140,24 @@ const CartView: React.FC = () => {
     </div>
   );
 
+  const undoBanner = undoSave && (
+    <div
+      className="bg-gray-900 text-white rounded-lg px-4 py-3 flex items-center justify-between gap-4"
+      role="status"
+      data-testid="undo-save"
+    >
+      <span className="text-sm">Saved “{undoSave.productName}” for later.</span>
+      <button onClick={handleUndoSave} className="text-sm font-bold text-amazin-yellow hover:underline">
+        Undo
+      </button>
+    </div>
+  );
+
   if (cartItems.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto py-8 px-4">
+      <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
         {confirmationBanner}
+        {undoBanner}
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🛒</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
@@ -102,6 +169,7 @@ const CartView: React.FC = () => {
             Continue shopping
           </a>
         </div>
+        <SavedForLater products={products} sellers={sellers} />
       </div>
     );
   }
@@ -112,11 +180,22 @@ const CartView: React.FC = () => {
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-6">
           {confirmationBanner}
+          {undoBanner}
 
           <div className="flex items-end justify-between flex-wrap gap-2">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Shopping Cart ({pluralizeItems(totals.totalQuantity)})
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Shopping Cart ({pluralizeItems(cartItems.reduce((sum, item) => sum + item.quantity, 0))})
+              </h2>
+              {savedItems.length > 0 && (
+                <a href="#saved-for-later-heading" onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('saved-for-later-heading')?.scrollIntoView({ behavior: 'smooth' });
+                }} className="text-sm text-amazin-blue hover:underline">
+                  {pluralizeItems(savedItems.length)} saved for later
+                </a>
+              )}
+            </div>
             <label className="flex items-center space-x-2 text-sm text-amazin-blue cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -168,6 +247,8 @@ const CartView: React.FC = () => {
               items={items}
               products={products}
               sellers={sellers}
+              onCheckoutFolder={handleCheckoutFolder}
+              onSavedForLater={handleSavedForLater}
             />
           ))}
 
@@ -187,24 +268,48 @@ const CartView: React.FC = () => {
                       item={item}
                       product={product}
                       seller={seller}
+                      onSavedForLater={handleSavedForLater}
                     />
                   );
                 })}
               </div>
             </div>
           )}
+
+          {/* Saved for later: outside the cart and its totals */}
+          <SavedForLater products={products} sellers={sellers} />
         </div>
 
         {/* Order Summary */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-md p-6 sticky top-20">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Order Summary</h2>
+          <div
+            id="order-summary"
+            className={`bg-white rounded-lg shadow-md p-6 sticky top-20 ${folderMode ? 'ring-2 ring-amazin-orange' : ''}`}
+            data-testid="order-summary"
+          >
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {folderMode ? `Checking out: ${checkoutFolder!.name}` : 'Order Summary'}
+            </h2>
 
             {/* Selected Items Info */}
             <div className="mb-4 pb-4 border-b">
-              <p className="text-sm text-gray-600">
-                {totals.selectedLineCount} of {cartItems.length} products selected ({pluralizeItems(totals.selectedQuantity)})
-              </p>
+              {folderMode ? (
+                <>
+                  <p className="text-sm text-gray-600">
+                    Only the {pluralizeItems(totals.selectedQuantity)} in this folder. The rest of your cart and your saved items stay put.
+                  </p>
+                  <button
+                    onClick={() => setCheckoutFolderId(null)}
+                    className="text-sm text-amazin-blue hover:underline mt-1"
+                  >
+                    ← Back to whole cart
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-gray-600">
+                  {totals.selectedLineCount} of {cartItems.length} products selected ({pluralizeItems(totals.selectedQuantity)})
+                </p>
+              )}
             </div>
 
             {/* Itemized Charges */}

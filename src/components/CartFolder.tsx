@@ -9,16 +9,25 @@ interface CartFolderProps {
   items: CartItemType[];
   products: Product[];
   sellers: Seller[];
+  onCheckoutFolder: (folderId: string) => void;
+  onSavedForLater?: (savedId: string, productName: string) => void;
 }
 
-const CartFolder: React.FC<CartFolderProps> = ({ folder, items, products, sellers }) => {
+const CartFolder: React.FC<CartFolderProps> = ({
+  folder,
+  items,
+  products,
+  sellers,
+  onCheckoutFolder,
+  onSavedForLater
+}) => {
   const { deleteFolder } = useStore();
   const [isExpanded, setIsExpanded] = useState(true);
 
   // Uses the shared cart pricing so folder subtotals match the order summary
-  // (including price lock expiry).
+  // (including price lock expiry). The header shows the whole folder, which is
+  // what "Check out this folder" buys.
   const folderSubtotal = items.reduce((sum, item) => {
-    if (!item.isSelected) return sum;
     const product = products.find(p => p.id === item.productId);
     if (!product) return sum;
     return sum + getLineTotal(item, product);
@@ -30,8 +39,9 @@ const CartFolder: React.FC<CartFolderProps> = ({ folder, items, products, seller
     <div className="border rounded-lg mb-4 overflow-hidden">
       {/* Folder Header */}
       <div
-        className="bg-gray-50 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-100"
+        className="bg-gray-50 px-4 py-3 flex items-center justify-between flex-wrap gap-2 cursor-pointer hover:bg-gray-100"
         onClick={() => setIsExpanded(!isExpanded)}
+        data-testid={`folder-${folder.name}`}
       >
         <div className="flex items-center space-x-3">
           <span className="text-gray-500">
@@ -40,10 +50,20 @@ const CartFolder: React.FC<CartFolderProps> = ({ folder, items, products, seller
           <h3 className="font-semibold text-gray-900">{folder.name}</h3>
           <span className="text-sm text-gray-500">({pluralizeItems(folderQuantity)})</span>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center flex-wrap gap-3">
           <span className="font-bold text-gray-900">
             Subtotal: {formatMoney(folderSubtotal)}
           </span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCheckoutFolder(folder.id);
+            }}
+            disabled={items.length === 0}
+            className="text-sm font-semibold bg-amazin-yellow hover:bg-amazin-orange text-gray-900 px-3 py-1 rounded-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+          >
+            Check out this folder
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -75,6 +95,7 @@ const CartFolder: React.FC<CartFolderProps> = ({ folder, items, products, seller
                   item={item}
                   product={product}
                   seller={seller}
+                  onSavedForLater={onSavedForLater}
                 />
               );
             })

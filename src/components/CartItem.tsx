@@ -3,6 +3,7 @@ import { CartItem as CartItemType, Product, Seller } from '../types';
 import { useStore } from '../context/store';
 import { href } from '../router';
 import { CategoryIcon } from './Icons';
+import MoveToMenu from './MoveToMenu';
 import { formatPriceLockCountdown, isPriceLockValid } from '../utils/ratingCalculations';
 import {
   formatMoney,
@@ -16,17 +17,22 @@ interface CartItemProps {
   item: CartItemType;
   product: Product;
   seller: Seller;
+  onSavedForLater?: (savedId: string, productName: string) => void;
 }
 
-const CartItem: React.FC<CartItemProps> = ({ item, product, seller }) => {
+const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLater }) => {
   const {
     updateCartItemQuantity,
     removeFromCart,
     toggleCartItemSelection,
     togglePriceLock,
-    cartFolders,
-    moveItemToFolder
+    saveForLater
   } = useStore();
+
+  const handleSaveForLater = () => {
+    const savedId = saveForLater(item.id, product.currentPrice);
+    if (savedId && onSavedForLater) onSavedForLater(savedId, product.name);
+  };
 
   const [countdown, setCountdown] = useState(() => {
     // Initialize countdown only in browser
@@ -103,23 +109,6 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller }) => {
             </div>
           )}
 
-          {/* Folder Selection */}
-          <div className="mb-2">
-            <select
-              value={item.folderId || ''}
-              onChange={(e) => moveItemToFolder(item.id, e.target.value || undefined)}
-              className="text-xs border border-gray-300 rounded px-2 py-1"
-              aria-label="Move to folder"
-            >
-              <option value="">No folder</option>
-              {cartFolders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Quantity and Actions (Hick's Law: only the few actions a shopper needs) */}
           <div className="flex items-center flex-wrap gap-4">
             <div className="flex items-center space-x-2">
@@ -146,6 +135,16 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller }) => {
             >
               Delete
             </button>
+
+            <button
+              onClick={handleSaveForLater}
+              className="text-sm text-amazin-blue hover:underline"
+              aria-label={`Save ${product.name} for later`}
+            >
+              Save for later
+            </button>
+
+            <MoveToMenu itemId={item.id} currentFolderId={item.folderId} productName={product.name} />
 
             {/* Price lock is only offered by eligible sellers (sellers.csv) */}
             {seller.priceLockEligible || item.priceLocked ? (
