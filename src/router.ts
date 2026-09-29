@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 
 export type Route =
   | { name: 'products' }
-  | { name: 'product'; id: string }
+  | { name: 'product'; id: string; params: URLSearchParams }
   | { name: 'sellers' }
-  | { name: 'seller'; id: string }
+  | { name: 'seller'; id: string; params: URLSearchParams }
   | { name: 'search'; params: URLSearchParams }
   | { name: 'login'; params: URLSearchParams }
   | { name: 'cart' }
@@ -24,11 +24,11 @@ export const parseHash = (hash: string): Route => {
     case 'products':
       return { name: 'products' };
     case 'product':
-      return parts[1] ? { name: 'product', id: parts[1] } : { name: 'notFound' };
+      return parts[1] ? { name: 'product', id: parts[1], params } : { name: 'notFound' };
     case 'sellers':
       return { name: 'sellers' };
     case 'seller':
-      return parts[1] ? { name: 'seller', id: parts[1] } : { name: 'notFound' };
+      return parts[1] ? { name: 'seller', id: parts[1], params } : { name: 'notFound' };
     case 'search':
       return { name: 'search', params };
     case 'login':
@@ -42,9 +42,17 @@ export const parseHash = (hash: string): Route => {
 
 export const href = {
   products: () => '#/products',
-  product: (id: string) => `#/product/${encodeURIComponent(id)}`,
+  // Passing a reviewId scrolls straight to that review on the product page
+  // (used by the review excerpt shown in product rows).
+  product: (id: string, reviewId?: string) =>
+    reviewId
+      ? `#/product/${encodeURIComponent(id)}?review=${encodeURIComponent(reviewId)}`
+      : `#/product/${encodeURIComponent(id)}`,
   sellers: () => '#/sellers',
-  seller: (id: string) => `#/seller/${encodeURIComponent(id)}`,
+  seller: (id: string, reviewId?: string) =>
+    reviewId
+      ? `#/seller/${encodeURIComponent(id)}?review=${encodeURIComponent(reviewId)}`
+      : `#/seller/${encodeURIComponent(id)}`,
   search: (params: URLSearchParams) => `#/search?${params.toString()}`,
   login: (next?: string) => (next ? `#/login?next=${encodeURIComponent(next)}` : '#/login'),
   cart: () => '#/cart'

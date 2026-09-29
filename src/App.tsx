@@ -21,11 +21,11 @@ function App() {
       case 'products':
         return <ProductsPage />;
       case 'product':
-        return <ProductPage key={route.id} id={route.id} />;
+        return <ProductPage key={route.id} id={route.id} params={route.params} />;
       case 'sellers':
         return <SellersPage />;
       case 'seller':
-        return <SellerPage key={route.id} id={route.id} />;
+        return <SellerPage key={route.id} id={route.id} params={route.params} />;
       case 'search':
         return <SearchPage params={route.params} />;
       case 'login':
