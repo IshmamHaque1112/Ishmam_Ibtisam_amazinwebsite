@@ -8,8 +8,8 @@ All dataset files are located in: `src/data/`
 ## Available Dataset Files
 
 ### 1. customers.csv
-**Location:** `src/data/customers.csv`
-**Purpose:** Customer account data with generated passwords
+**Location:** `src/data/customers.csv` (no `password` column: this file is bundled into the public site). `data-export/customers.csv` still has the demo passwords for import.
+**Purpose:** Customer account data
 **Columns:**
 - customer_id (Primary Key)
 - username (Unique, case-insensitive)
