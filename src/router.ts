@@ -1,80 +1,45 @@
 import { useEffect, useState } from 'react';
+import { parseHash, Route } from './routes';
 
-// Tiny hash router (#/products, #/product/P001, #/search?q=pan). Hash URLs work
-// on static hosting like Vercel without any rewrite rules.
+// Tiny hash router. The route table and link builders live in routes.ts
+// (plain TypeScript, unit tested); this file adds the React hook.
 
-export type Route =
-  | { name: 'home' }
-  | { name: 'products' }
-  | { name: 'product'; id: string; params: URLSearchParams }
-  | { name: 'sellers' }
-  | { name: 'seller'; id: string; params: URLSearchParams }
-  | { name: 'search'; params: URLSearchParams }
-  | { name: 'login'; params: URLSearchParams }
-  | { name: 'cart' }
-  | { name: 'notFound' };
+export type { Route } from './routes';
+export { parseHash, href, safeNext } from './routes';
 
-export const parseHash = (hash: string): Route => {
-  const raw = hash.replace(/^#/, '') || '/';
-  const [path, query = ''] = raw.split('?');
-  const params = new URLSearchParams(query);
-  const parts = path.split('/').filter(Boolean).map(decodeURIComponent);
+// A "quiet" navigation (used by sort and filter controls) updates the URL
+// without scrolling to the top or moving focus, so keyboard users stay on
+// the control they just changed.
+let pendingQuiet = false;
+let lastWasQuiet = false;
 
-  switch (parts[0]) {
-    case undefined:
-    case 'home':
-      return { name: 'home' };
-    case 'products':
-      return { name: 'products' };
-    case 'product':
-      return parts[1] ? { name: 'product', id: parts[1], params } : { name: 'notFound' };
-    case 'sellers':
-      return { name: 'sellers' };
-    case 'seller':
-      return parts[1] ? { name: 'seller', id: parts[1], params } : { name: 'notFound' };
-    case 'search':
-      return { name: 'search', params };
-    case 'login':
-      return { name: 'login', params };
-    case 'cart':
-      return { name: 'cart' };
-    default:
-      return { name: 'notFound' };
-  }
+export const navigate = (to: string, options: { quiet?: boolean } = {}) => {
+  const next = to.replace(/^#/, '');
+  if (window.location.hash.replace(/^#/, '') === next) return;
+  pendingQuiet = Boolean(options.quiet);
+  window.location.hash = next;
 };
 
-export const href = {
-  home: () => '#/',
-  products: () => '#/products',
-  // Passing a reviewId scrolls straight to that review on the product page
-  // (used by the review excerpt shown in product rows).
-  product: (id: string, reviewId?: string) =>
-    reviewId
-      ? `#/product/${encodeURIComponent(id)}?review=${encodeURIComponent(reviewId)}`
-      : `#/product/${encodeURIComponent(id)}`,
-  sellers: () => '#/sellers',
-  seller: (id: string, reviewId?: string) =>
-    reviewId
-      ? `#/seller/${encodeURIComponent(id)}?review=${encodeURIComponent(reviewId)}`
-      : `#/seller/${encodeURIComponent(id)}`,
-  search: (params: URLSearchParams) => `#/search?${params.toString()}`,
-  login: (next?: string) => (next ? `#/login?next=${encodeURIComponent(next)}` : '#/login'),
-  cart: () => '#/cart'
-};
-
-export const navigate = (to: string) => {
-  window.location.hash = to.replace(/^#/, '');
-};
+export const wasQuietNavigation = () => lastWasQuiet;
 
 export const useRoute = (): Route => {
   const [route, setRoute] = useState<Route>(() => parseHash(window.location.hash));
   useEffect(() => {
     const onChange = () => {
+      lastWasQuiet = pendingQuiet;
+      pendingQuiet = false;
       setRoute(parseHash(window.location.hash));
-      window.scrollTo(0, 0);
+      if (!lastWasQuiet) window.scrollTo(0, 0);
     };
     window.addEventListener('hashchange', onChange);
     return () => window.removeEventListener('hashchange', onChange);
   }, []);
   return route;
+};
+
+// Sets the browser tab title for the current page (WCAG 2.4.2).
+export const useDocumentTitle = (title: string) => {
+  useEffect(() => {
+    document.title = title ? `${title} · Amazin` : 'Amazin — Transparent Shopping';
+  }, [title]);
 };
