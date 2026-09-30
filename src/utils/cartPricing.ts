@@ -7,7 +7,13 @@ export const TAX_RATE = 0.08875; // NYC sales tax, 8.875%
 export const FREE_SHIPPING_THRESHOLD = 35;
 export const STANDARD_SHIPPING = 5.99;
 
-const roundCents = (value: number): number => Math.round(value * 100) / 100;
+// Each cart line holds 1 to 10 units.
+export const MAX_QUANTITY = 10;
+
+export const clampQuantity = (quantity: number): number =>
+  Math.min(MAX_QUANTITY, Math.max(1, Math.floor(Number.isFinite(quantity) ? quantity : 1)));
+
+export const roundCents = (value: number): number => Math.round(value * 100) / 100;
 
 export const isLockActive = (item: CartItem): boolean =>
   item.priceLocked &&
