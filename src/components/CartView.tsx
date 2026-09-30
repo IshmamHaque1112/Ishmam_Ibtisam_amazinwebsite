@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../context/store';
 import { useDb } from '../db/DbProvider';
-import { href } from '../router';
+import { href, useDocumentTitle } from '../router';
 import CartItem from './CartItem';
 import CartFolder from './CartFolder';
 import FreeShippingProgress from './FreeShippingProgress';
@@ -34,10 +34,11 @@ const CartView: React.FC = () => {
     savedItems,
     createFolder,
     setAllCartItemsSelected,
-    checkoutSelectedItems,
-    checkoutItems,
-    moveSavedToCart
+    placeOrder,
+    moveSavedToCart,
+    storageError
   } = useStore();
+  useDocumentTitle('Your cart');
   const db = useDb();
   const products = db.getProducts();
   const sellers = db.getSellers();
@@ -46,6 +47,7 @@ const CartView: React.FC = () => {
   // When set, the order summary checks out only this folder.
   const [checkoutFolderId, setCheckoutFolderId] = useState<string | null>(null);
   const [undoSave, setUndoSave] = useState<UndoSave | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // The Undo offer disappears after a few seconds.
   useEffect(() => {
@@ -97,19 +99,24 @@ const CartView: React.FC = () => {
     }
   };
 
+  // Demo checkout: records the order in the shopper's order history and
+  // removes those lines from the cart. No payment is taken.
   const handleCheckout = () => {
     if (!canCheckout) return;
-    const orderTotals = totals;
-    if (folderMode) {
-      checkoutItems(folderItems.map(item => item.id));
-    } else {
-      checkoutSelectedItems();
+    const lineIds = folderMode
+      ? folderItems.map(item => item.id)
+      : cartItems.filter(item => item.isSelected).map(item => item.id);
+    const order = placeOrder(lineIds, products, sellers, folderMode ? checkoutFolder!.name : undefined);
+    if (!order) {
+      setCheckoutError('These items are no longer available, so the order could not be placed.');
+      return;
     }
+    setCheckoutError(null);
     setConfirmation({
-      orderId: `AMZ-${Date.now().toString().slice(-8)}`,
-      itemCount: orderTotals.selectedQuantity,
-      grandTotal: orderTotals.grandTotal,
-      folderName: folderMode ? checkoutFolder!.name : undefined
+      orderId: order.id,
+      itemCount: order.itemCount,
+      grandTotal: order.grandTotal,
+      folderName: order.folderName
     });
     setCheckoutFolderId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -127,15 +134,18 @@ const CartView: React.FC = () => {
           {confirmation.folderName && <span className="font-normal"> · folder “{confirmation.folderName}”</span>}
         </p>
         <p className="text-sm">
-          {pluralizeItems(confirmation.itemCount)} · Total charged {formatMoney(confirmation.grandTotal)} (demo order, no real payment)
+          {pluralizeItems(confirmation.itemCount)} · Order total {formatMoney(confirmation.grandTotal)} (demo order, no payment was taken)
         </p>
+        <a href={href.account()} className="text-sm font-semibold text-green-900 underline">
+          View your order history
+        </a>
       </div>
       <button
         onClick={() => setConfirmation(null)}
         className="text-green-800 hover:text-green-950 text-sm ml-4"
         aria-label="Dismiss order confirmation"
       >
-        ✕
+        <span aria-hidden="true">✕</span>
       </button>
     </div>
   );
@@ -147,10 +157,16 @@ const CartView: React.FC = () => {
       data-testid="undo-save"
     >
       <span className="text-sm">Saved “{undoSave.productName}” for later.</span>
-      <button onClick={handleUndoSave} className="text-sm font-bold text-amazin-yellow hover:underline">
+      <button type="button" onClick={handleUndoSave} className="text-sm font-bold text-amazin-yellow hover:underline">
         Undo
       </button>
     </div>
+  );
+
+  const storageBanner = storageError && (
+    <p className="bg-amber-50 border border-amber-300 text-amber-900 rounded-lg p-3 text-sm" role="alert">
+      Your browser isn't letting Amazin save data, so cart changes will be lost when you close this tab.
+    </p>
   );
 
   if (cartItems.length === 0) {
@@ -158,16 +174,22 @@ const CartView: React.FC = () => {
       <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
         {confirmationBanner}
         {undoBanner}
+        {storageBanner}
         <div className="text-center py-16">
-          <div className="text-6xl mb-4">🛒</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
+          <div className="text-6xl mb-4" aria-hidden="true">🛒</div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
           <p className="text-gray-600 mb-6">Add some products to get started!</p>
-          <a
-            href={href.products()}
-            className="inline-block bg-amazin-yellow hover:bg-amazin-orange text-gray-900 font-semibold px-6 py-2 rounded-md transition-colors"
-          >
-            Continue shopping
-          </a>
+          <div className="flex flex-wrap justify-center gap-3">
+            <a
+              href={href.products()}
+              className="inline-block bg-amazin-yellow hover:bg-amazin-orange text-gray-900 font-semibold px-6 py-2 rounded-md transition-colors"
+            >
+              Continue shopping
+            </a>
+            <a href={href.account()} className="inline-block border border-gray-300 bg-white hover:bg-gray-50 text-gray-900 font-semibold px-6 py-2 rounded-md">
+              Order history
+            </a>
+          </div>
         </div>
         <SavedForLater products={products} sellers={sellers} />
       </div>
@@ -181,12 +203,13 @@ const CartView: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {confirmationBanner}
           {undoBanner}
+          {storageBanner}
 
           <div className="flex items-end justify-between flex-wrap gap-2">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-gray-900">
                 Shopping Cart ({pluralizeItems(cartItems.reduce((sum, item) => sum + item.quantity, 0))})
-              </h2>
+              </h1>
               {savedItems.length > 0 && (
                 <a href="#saved-for-later-heading" onClick={(e) => {
                   e.preventDefault();
@@ -217,22 +240,27 @@ const CartView: React.FC = () => {
 
           {/* Create New Folder */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-2">Create New Folder</h3>
-            <div className="flex space-x-2">
+            <h2 className="font-semibold text-gray-900 mb-2">
+              <label htmlFor="new-cart-folder">Create new folder</label>
+            </h2>
+            <div className="flex gap-2">
               <input
+                id="new-cart-folder"
                 type="text"
+                maxLength={40}
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateFolder();
                 }}
                 placeholder="Folder name (e.g., Pantry, School Supplies)"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amazin-orange focus:border-transparent"
+                className="flex-1 min-w-0 px-3 sm:px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amazin-orange focus:border-transparent"
               />
               <button
+                type="button"
                 onClick={handleCreateFolder}
                 disabled={!newFolderName.trim()}
-                className="bg-amazin-orange hover:bg-amazin-yellow text-white font-semibold px-6 py-2 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="bg-amazin-orange hover:bg-amazin-yellow text-gray-900 font-semibold px-4 sm:px-6 py-2 rounded-md transition-colors disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
               >
                 Create
               </button>
@@ -255,7 +283,7 @@ const CartView: React.FC = () => {
           {/* Unassigned Items */}
           {unassignedItems.length > 0 && (
             <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-4">Unassigned Items</h3>
+              <h2 className="font-semibold text-gray-900 mb-4">Unassigned items</h2>
               <div className="space-y-3">
                 {unassignedItems.map((item) => {
                   const product = products.find(p => p.id === item.productId);
@@ -299,6 +327,7 @@ const CartView: React.FC = () => {
                     Only the {pluralizeItems(totals.selectedQuantity)} in this folder. The rest of your cart and your saved items stay put.
                   </p>
                   <button
+                    type="button"
                     onClick={() => setCheckoutFolderId(null)}
                     className="text-sm text-amazin-blue hover:underline mt-1"
                   >
@@ -328,7 +357,7 @@ const CartView: React.FC = () => {
                 <span className="text-gray-600">Est. Shipping</span>
                 <span className="font-semibold">
                   {totals.shipping === 0 ? (
-                    <span className="text-green-600">FREE</span>
+                    <span className="text-green-700">FREE</span>
                   ) : (
                     formatMoney(totals.shipping)
                   )}
@@ -336,30 +365,34 @@ const CartView: React.FC = () => {
               </div>
 
               {totals.shipping > 0 && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-600">
                   Free shipping on orders of {formatMoney(FREE_SHIPPING_THRESHOLD)} or more
                 </div>
               )}
 
               <div className="border-t pt-3 flex justify-between">
                 <span className="text-lg font-bold text-gray-900">Grand Total</span>
-                <span className="text-lg font-bold text-amazin-orange" data-testid="grand-total">
+                <span className="text-lg font-bold text-gray-900" data-testid="grand-total">
                   {formatMoney(totals.grandTotal)}
                 </span>
               </div>
             </div>
 
             {/* Checkout Button (Fitts's Law: large, always in view) */}
+            {checkoutError && (
+              <p className="text-sm bg-red-50 text-red-800 rounded p-2 mb-3" role="alert">{checkoutError}</p>
+            )}
             <button
+              type="button"
               onClick={handleCheckout}
               disabled={!canCheckout}
-              className="w-full bg-amazin-orange hover:bg-amazin-yellow text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full bg-amazin-orange hover:bg-amazin-yellow text-gray-900 font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
             >
               {canCheckout ? checkoutLabel : 'Select items to check out'}
             </button>
 
-            <p className="text-xs text-gray-500 text-center mt-4">
-              🔒 Secure checkout powered by Amazin
+            <p className="text-xs text-gray-600 text-center mt-4">
+              Demo checkout: no payment is taken. Orders are saved to your order history.
             </p>
           </div>
         </div>
@@ -369,13 +402,14 @@ const CartView: React.FC = () => {
       <div className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t shadow-lg p-3 z-40">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
           <div>
-            <div className="text-xs text-gray-500">Grand Total</div>
+            <div className="text-xs text-gray-600">Grand Total</div>
             <div className="text-lg font-bold text-gray-900">{formatMoney(totals.grandTotal)}</div>
           </div>
           <button
+            type="button"
             onClick={handleCheckout}
             disabled={!canCheckout}
-            className="flex-1 bg-amazin-orange hover:bg-amazin-yellow text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="flex-1 bg-amazin-orange hover:bg-amazin-yellow text-gray-900 font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
           >
             {canCheckout ? checkoutLabel : 'Select items'}
           </button>

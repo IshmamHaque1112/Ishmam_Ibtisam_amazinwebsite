@@ -53,18 +53,18 @@ const MoveToMenu: React.FC<MoveToMenuProps> = ({ itemId, currentFolderId, produc
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="text-sm px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-100"
+        className="text-sm px-3 py-1 rounded border border-gray-300 text-gray-800 hover:bg-gray-100 whitespace-nowrap"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Move ${productName} to a folder`}
       >
-        📁 Move to…
+        <span aria-hidden="true">📁 </span>Move to…
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute z-30 mt-1 w-60 bg-white border border-gray-200 rounded-md shadow-lg py-1 left-0"
+          className="absolute z-30 mt-1 w-60 max-w-[calc(100vw-2rem)] bg-white border border-gray-200 rounded-md shadow-lg py-1 left-0"
         >
           {options.map(option => {
             const isCurrent = option.id === currentFolderId;
@@ -102,7 +102,7 @@ const MoveToMenu: React.FC<MoveToMenuProps> = ({ itemId, currentFolderId, produc
                 type="button"
                 onClick={createAndMove}
                 disabled={!newName.trim()}
-                className="text-sm px-2 py-1 rounded bg-amazin-orange text-white disabled:bg-gray-300"
+                className="text-sm font-semibold px-2 py-1 rounded bg-amazin-orange text-gray-900 disabled:bg-gray-300 disabled:text-gray-600"
               >
                 Create
               </button>

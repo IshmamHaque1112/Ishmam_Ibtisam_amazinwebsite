@@ -10,7 +10,8 @@ import {
   getEffectivePrice,
   getLineTotal,
   getLockSavingsPerUnit,
-  isLockActive
+  isLockActive,
+  MAX_QUANTITY
 } from '../utils/cartPricing';
 
 interface CartItemProps {
@@ -67,11 +68,13 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLa
       ? item.lockedPrice - product.currentPrice
       : 0;
 
+  const atMax = item.quantity >= MAX_QUANTITY;
+
   return (
-    <div className={`border rounded-lg p-4 ${!item.isSelected ? 'opacity-60 bg-gray-50' : 'bg-white'}`}>
-      <div className="flex items-start space-x-4">
+    <div className={`border rounded-lg p-3 sm:p-4 ${!item.isSelected ? 'bg-gray-50' : 'bg-white'}`}>
+      <div className="flex items-start gap-3 sm:gap-4">
         {/* Selection Checkbox */}
-        <div className="pt-2">
+        <div className="pt-1 sm:pt-2">
           <input
             type="checkbox"
             checked={item.isSelected}
@@ -82,21 +85,44 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLa
         </div>
 
         {/* Product icon (the datasets have no photos) */}
-        <CategoryIcon category={product.category} className="w-16 h-16 text-3xl" />
+        <CategoryIcon category={product.category} className="w-12 h-12 sm:w-16 sm:h-16 text-2xl sm:text-3xl" />
 
-        {/* Product Details */}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 mb-1">
-            <a href={href.product(product.id)} className="hover:underline">{product.name}</a>
-          </h3>
-          <p className="text-sm text-gray-600 mb-2">
-            Sold by:{' '}
-            <a href={href.seller(seller.id)} className="text-amazin-blue hover:underline">{seller.name}</a>
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
+            {/* Product Details */}
+            <div className="min-w-0">
+              <h3 className="font-semibold text-gray-900 mb-1 break-words">
+                <a href={href.product(product.id)} className="hover:underline">{product.name}</a>
+              </h3>
+              <p className="text-sm text-gray-600">
+                Sold by:{' '}
+                <a href={href.seller(seller.id)} className="text-amazin-blue hover:underline">{seller.name}</a>
+              </p>
+              {!item.isSelected && (
+                <p className="text-xs text-gray-600 mt-0.5">Not included in this checkout</p>
+              )}
+            </div>
+
+            {/* Price */}
+            <div className="sm:text-right flex-shrink-0">
+              <div className="text-lg font-bold text-gray-900">{formatMoney(totalPrice)}</div>
+              <div className="text-sm text-gray-600">{formatMoney(effectivePrice)} each</div>
+              {priceDropSavings > 0 && (
+                <div className="text-xs text-green-700">
+                  Price dropped! You save {formatMoney(priceDropSavings)}
+                </div>
+              )}
+              {lockSavings > 0 && (
+                <div className="text-xs text-green-700">
+                  Lock is saving you {formatMoney(lockSavings)} each
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Price Lock Status */}
           {item.priceLocked && item.lockedTimestamp && (
-            <div className="mb-2">
+            <div className="mt-2">
               {lockActive ? (
                 <div className="bg-green-50 text-green-800 text-xs px-2 py-1 rounded-full inline-flex items-center">
                   🔒 Locked at {formatMoney(item.lockedPrice as number)} · {countdown} left
@@ -110,35 +136,42 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLa
           )}
 
           {/* Quantity and Actions (Hick's Law: only the few actions a shopper needs) */}
-          <div className="flex items-center flex-wrap gap-4">
-            <div className="flex items-center space-x-2">
+          <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3">
+            <div className="flex items-center gap-2" role="group" aria-label={`Quantity of ${product.name}`}>
               <button
+                type="button"
                 onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
-                className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded flex items-center justify-center font-bold"
+                className="w-9 h-9 bg-gray-200 hover:bg-gray-300 rounded flex items-center justify-center font-bold"
                 aria-label={item.quantity === 1 ? `Remove ${product.name}` : `Decrease quantity of ${product.name}`}
               >
-                {item.quantity === 1 ? '🗑' : '-'}
+                <span aria-hidden="true">{item.quantity === 1 ? '🗑' : '−'}</span>
               </button>
               <span className="w-8 text-center font-medium" aria-live="polite">{item.quantity}</span>
               <button
+                type="button"
                 onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                className="w-8 h-8 bg-gray-200 hover:bg-gray-300 rounded flex items-center justify-center font-bold"
-                aria-label={`Increase quantity of ${product.name}`}
+                disabled={atMax}
+                className="w-9 h-9 bg-gray-200 hover:bg-gray-300 rounded flex items-center justify-center font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label={atMax ? `Maximum of ${MAX_QUANTITY} reached for ${product.name}` : `Increase quantity of ${product.name}`}
               >
-                +
+                <span aria-hidden="true">+</span>
               </button>
             </div>
+            {atMax && <span className="text-xs text-gray-600">Limit {MAX_QUANTITY} per item</span>}
 
             <button
+              type="button"
               onClick={() => removeFromCart(item.id)}
-              className="text-sm text-red-600 hover:text-red-800"
+              className="text-sm text-red-700 hover:text-red-900 whitespace-nowrap"
+              aria-label={`Delete ${product.name} from cart`}
             >
               Delete
             </button>
 
             <button
+              type="button"
               onClick={handleSaveForLater}
-              className="text-sm text-amazin-blue hover:underline"
+              className="text-sm text-amazin-blue hover:underline whitespace-nowrap"
               aria-label={`Save ${product.name} for later`}
             >
               Save for later
@@ -149,37 +182,20 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLa
             {/* Price lock is only offered by eligible sellers (sellers.csv) */}
             {seller.priceLockEligible || item.priceLocked ? (
               <button
+                type="button"
                 onClick={() => togglePriceLock(item.id, product.currentPrice)}
-                className={`text-sm px-3 py-1 rounded ${
+                className={`text-sm px-3 py-1 rounded whitespace-nowrap ${
                   lockActive
                     ? 'bg-red-100 text-red-800 hover:bg-red-200'
                     : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                 }`}
               >
-                {lockActive ? 'Unlock Price' : lockExpired ? 'Relock Price' : 'Lock Price'}
+                {lockActive ? 'Unlock price' : lockExpired ? 'Relock price' : 'Lock price for 24h'}
               </button>
             ) : (
-              <span className="text-xs text-gray-500" title="This seller doesn't offer price locks">
-                No price lock from this seller
-              </span>
+              <span className="text-xs text-gray-600">No price lock from this seller</span>
             )}
           </div>
-        </div>
-
-        {/* Price */}
-        <div className="text-right">
-          <div className="text-lg font-bold text-gray-900">{formatMoney(totalPrice)}</div>
-          <div className="text-sm text-gray-600">{formatMoney(effectivePrice)} each</div>
-          {priceDropSavings > 0 && (
-            <div className="text-xs text-green-600">
-              Price dropped! You save {formatMoney(priceDropSavings)}
-            </div>
-          )}
-          {lockSavings > 0 && (
-            <div className="text-xs text-green-600">
-              Lock is saving you {formatMoney(lockSavings)} each
-            </div>
-          )}
         </div>
       </div>
     </div>

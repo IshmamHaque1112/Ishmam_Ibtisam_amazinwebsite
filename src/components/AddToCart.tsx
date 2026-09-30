@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Product } from '../types';
 import { useStore } from '../context/store';
 import { href } from '../router';
+import { MAX_QUANTITY } from '../utils/cartPricing';
 
 interface AddToCartProps {
   product: Product;
@@ -14,19 +15,21 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
   const { username, addToCart, cartFolders, createFolder } = useStore();
   const [folderId, setFolderId] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
-  const [added, setAdded] = useState(false);
+  // Short-lived feedback after a click: 'added', or 'max' when that line is
+  // already at the per-item limit.
+  const [feedback, setFeedback] = useState<'added' | 'max' | null>(null);
 
   useEffect(() => {
-    if (!added) return;
-    const timer = setTimeout(() => setAdded(false), 1500);
+    if (!feedback) return;
+    const timer = setTimeout(() => setFeedback(null), 2000);
     return () => clearTimeout(timer);
-  }, [added]);
+  }, [feedback]);
 
   if (!username) {
     return (
       <a
         href={href.login(window.location.hash)}
-        className={`inline-block text-center border border-amazin-orange text-amazin-dark hover:bg-amazin-yellow/30 rounded ${
+        className={`inline-block text-center border border-amber-600 text-amazin-dark hover:bg-amazin-yellow/30 rounded whitespace-nowrap ${
           compact ? 'text-xs px-2 py-1' : 'text-sm px-4 py-2'
         }`}
       >
@@ -36,8 +39,8 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
   }
 
   const handleAdd = () => {
-    addToCart(product, folderId || undefined);
-    setAdded(true);
+    const added = addToCart(product, folderId || undefined);
+    setFeedback(added > 0 ? 'added' : 'max');
   };
 
   const handleCreateFolder = () => {
@@ -69,7 +72,14 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
               type="text"
               value={newFolderName}
               onChange={e => setNewFolderName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleCreateFolder();
+                }
+              }}
               placeholder="New folder name"
+              aria-label="New cart folder name"
               maxLength={40}
               className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
             />
@@ -87,13 +97,17 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
       <button
         type="button"
         onClick={handleAdd}
-        className={`bg-amazin-orange hover:bg-amazin-yellow text-white font-semibold rounded transition-colors ${
-          compact ? 'text-xs px-3 py-1' : 'w-full text-sm px-4 py-2'
+        className={`bg-amazin-orange hover:bg-amazin-yellow text-gray-900 font-semibold rounded transition-colors whitespace-nowrap ${
+          compact ? 'text-xs px-3 py-1.5' : 'w-full text-sm px-4 py-2'
         }`}
-        aria-live="polite"
+        aria-label={`Add ${product.name} to cart`}
       >
-        {added ? 'Added ✓' : 'Add to Cart'}
+        {feedback === 'added' ? 'Added ✓' : 'Add to Cart'}
       </button>
+      <span className={`block text-xs ${feedback === 'max' ? 'text-red-800 mt-1' : 'sr-only'}`} role="status">
+        {feedback === 'added' && `${product.name} added to your cart.`}
+        {feedback === 'max' && `Limit ${MAX_QUANTITY} per item in your cart.`}
+      </span>
     </div>
   );
 };

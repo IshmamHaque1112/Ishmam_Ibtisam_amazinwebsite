@@ -37,52 +37,57 @@ const CartFolder: React.FC<CartFolderProps> = ({
 
   return (
     <div className="border rounded-lg mb-4 overflow-hidden">
-      {/* Folder Header */}
+      {/* Folder Header: the name toggles the folder open and closed. */}
       <div
-        className="bg-gray-50 px-4 py-3 flex items-center justify-between flex-wrap gap-2 cursor-pointer hover:bg-gray-100"
-        onClick={() => setIsExpanded(!isExpanded)}
+        className="bg-gray-50 px-4 py-3 flex items-center justify-between flex-wrap gap-2"
         data-testid={`folder-${folder.name}`}
       >
-        <div className="flex items-center space-x-3">
-          <span className="text-gray-500">
-            {isExpanded ? '▼' : '▶'}
-          </span>
-          <h3 className="font-semibold text-gray-900">{folder.name}</h3>
-          <span className="text-sm text-gray-500">({pluralizeItems(folderQuantity)})</span>
-        </div>
+        <h3>
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            aria-expanded={isExpanded}
+            aria-controls={`folder-items-${folder.id}`}
+            className="flex items-center gap-3 text-left rounded hover:bg-gray-100 -mx-1 px-1"
+          >
+            <span className="text-gray-600" aria-hidden="true">
+              {isExpanded ? '▼' : '▶'}
+            </span>
+            <span className="font-semibold text-gray-900">{folder.name}</span>
+            <span className="text-sm text-gray-600">({pluralizeItems(folderQuantity)})</span>
+          </button>
+        </h3>
         <div className="flex items-center flex-wrap gap-3">
           <span className="font-bold text-gray-900">
             Subtotal: {formatMoney(folderSubtotal)}
           </span>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCheckoutFolder(folder.id);
-            }}
+            type="button"
+            onClick={() => onCheckoutFolder(folder.id)}
             disabled={items.length === 0}
-            className="text-sm font-semibold bg-amazin-yellow hover:bg-amazin-orange text-gray-900 px-3 py-1 rounded-md disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+            className="text-sm font-semibold bg-amazin-yellow hover:bg-amazin-orange text-gray-900 px-3 py-1 rounded-md disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
           >
             Check out this folder
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm(`Delete folder "${folder.name}"? Items will be moved to general cart.`)) {
+            type="button"
+            onClick={() => {
+              if (confirm(`Delete folder "${folder.name}"? Its items move to Unassigned items.`)) {
                 deleteFolder(folder.id);
               }
             }}
-            className="text-sm text-red-600 hover:text-red-800"
+            className="text-sm text-red-700 hover:text-red-900"
           >
-            Delete Folder
+            Delete folder
           </button>
         </div>
       </div>
 
       {/* Folder Items */}
       {isExpanded && (
-        <div className="p-4 space-y-3">
+        <div className="p-4 space-y-3" id={`folder-items-${folder.id}`}>
           {items.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No items in this folder</p>
+            <p className="text-gray-600 text-center py-4">No items in this folder</p>
           ) : (
             items.map((item) => {
               const product = products.find(p => p.id === item.productId);

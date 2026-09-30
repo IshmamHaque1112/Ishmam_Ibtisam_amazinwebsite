@@ -18,9 +18,21 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
   const [maxPrice, setMaxPrice] = useState(initial?.get('max') ?? '');
   const [category, setCategory] = useState(initial?.get('category') ?? '');
   const [sellerId, setSellerId] = useState(initial?.get('seller') ?? '');
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const min = minPrice === '' ? undefined : Number(minPrice);
+    const max = maxPrice === '' ? undefined : Number(maxPrice);
+    if ((min !== undefined && (!Number.isFinite(min) || min < 0)) || (max !== undefined && (!Number.isFinite(max) || max < 0))) {
+      setError('Prices must be numbers of 0 or more.');
+      return;
+    }
+    if (min !== undefined && max !== undefined && min > max) {
+      setError('The minimum price is higher than the maximum price.');
+      return;
+    }
+    setError(null);
     const params = new URLSearchParams();
     if (text.trim()) params.set('q', text.trim());
     if (minPrice !== '') params.set('min', minPrice);
@@ -37,9 +49,10 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
     setMaxPrice('');
     setCategory('');
     setSellerId('');
+    setError(null);
   };
 
-  const field = 'border border-gray-300 rounded px-2 py-1 text-sm text-gray-900';
+  const field = 'border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white max-w-full';
 
   return (
     <form
@@ -49,7 +62,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
       aria-label="Product search"
     >
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-end gap-3">
-        <label className="flex flex-col text-xs text-gray-600 flex-1 min-w-[180px]">
+        <label className="flex flex-col text-xs text-gray-700 flex-1 min-w-[180px]">
           Search
           <input
             type="search"
@@ -60,7 +73,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
             autoFocus
           />
         </label>
-        <label className="flex flex-col text-xs text-gray-600 w-24">
+        <label className="flex flex-col text-xs text-gray-700 w-24">
           Min price
           <input
             type="number"
@@ -73,7 +86,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
             className={field}
           />
         </label>
-        <label className="flex flex-col text-xs text-gray-600 w-24">
+        <label className="flex flex-col text-xs text-gray-700 w-24">
           Max price
           <input
             type="number"
@@ -86,7 +99,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
             className={field}
           />
         </label>
-        <label className="flex flex-col text-xs text-gray-600">
+        <label className="flex flex-col text-xs text-gray-700">
           Category
           <select value={category} onChange={e => setCategory(e.target.value)} className={field}>
             <option value="">All categories</option>
@@ -95,7 +108,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
             ))}
           </select>
         </label>
-        <label className="flex flex-col text-xs text-gray-600">
+        <label className="flex flex-col text-xs text-gray-700 min-w-0 max-w-full">
           3rd party seller
           <select value={sellerId} onChange={e => setSellerId(e.target.value)} className={field}>
             <option value="">All sellers</option>
@@ -107,14 +120,17 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
         <div className="flex gap-2">
           <button
             type="submit"
-            className="bg-amazin-orange hover:bg-amazin-yellow text-white font-semibold px-4 py-1.5 rounded text-sm"
+            className="bg-amazin-orange hover:bg-amazin-yellow text-gray-900 font-semibold px-4 py-1.5 rounded text-sm"
           >
             Search
           </button>
-          <button type="button" onClick={handleClear} className="text-sm text-gray-600 hover:underline px-2">
+          <button type="button" onClick={handleClear} className="text-sm text-gray-700 hover:underline px-2">
             Clear
           </button>
         </div>
+        {error && (
+          <p className="w-full text-sm text-red-800" role="alert">{error}</p>
+        )}
       </div>
     </form>
   );
