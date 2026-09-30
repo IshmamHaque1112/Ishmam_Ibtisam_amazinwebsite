@@ -1,4 +1,4 @@
-// Rows loaded from the SQLite database (seeded from src/data/*.csv)
+// Database types matching Supabase schema
 
 export interface Product {
   id: string;
@@ -35,6 +35,50 @@ export interface Customer {
   accountType: string;
   favoriteCategory: string | null;
   password: string;
+}
+
+// Additional types for Supabase tables
+export interface ProductReview {
+  reviewId: string;
+  productId: string;
+  username: string;
+  rating: number;
+  title?: string;
+  reviewText?: string;
+  reviewDate: string;
+  helpfulVotes: number;
+}
+
+export interface ProductTag {
+  productId: string;
+  tagName: string;
+  addedByUsername: string;
+  dateAdded: string;
+  count: number;
+}
+
+export interface SellerReview {
+  reviewId: string;
+  sellerId: string;
+  username: string;
+  rating: number;
+  title?: string;
+  reviewText?: string;
+  reviewDate: string;
+  helpfulVotes: number;
+}
+
+export interface SellerTag {
+  sellerId: string;
+  tagName: string;
+  addedByUsername: string;
+  dateAdded: string;
+  count: number;
+}
+
+export interface TagWithCount {
+  tagName: string;
+  count: number;
 }
 
 export interface ProductSearch {

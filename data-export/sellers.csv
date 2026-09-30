@@ -1,0 +1,26 @@
+seller_id,seller_name,return_policy,source_of_supply,years_active,price_rating,quality_rating,delivery_time_rating,overall_rating,price_lock_eligible
+S001,Northwind Traders,"60-day returns, buyer pays shipping",Overseas manufacturer (Vietnam),4,3.9,2.1,2.5,2.83,Yes
+S002,BlueCrate Supply Co.,"60-day returns, buyer pays shipping",Domestic manufacturer (Canada),1,3.8,2.1,1.8,2.57,Yes
+S003,Everstock Wholesale,"45-day returns, store credit only",Direct from artisan co-op,1,4.1,4.1,3.0,3.73,Yes
+S004,Pinecone Goods,No returns accepted,Overseas manufacturer (China),3,4.1,3.0,2.0,3.03,No
+S005,Harbor & Vine Imports,30-day free returns,Third-party liquidation stock,18,2.3,4.5,3.6,3.47,Yes
+S006,Redwood Mercantile,No returns accepted,Regional wholesale distributor,3,4.9,3.1,3.4,3.8,Yes
+S007,Summit Peak Distributors,"60-day returns, buyer pays shipping",Overseas manufacturer (China),13,4.0,4.3,4.9,4.4,No
+S008,Glacier Bay Outfitters,No returns accepted,Regional wholesale distributor,9,3.4,4.5,2.1,3.33,Yes
+S009,Ember & Oak Trading,14-day returns (restocking fee applies),Third-party liquidation stock,13,3.8,2.5,4.1,3.47,No
+S010,Cascade Supply Chain,No returns accepted,Domestic manufacturer (USA),8,5.0,3.9,3.4,4.1,Yes
+S011,Luma Home Goods,No returns accepted,Regional wholesale distributor,16,4.4,3.2,1.7,3.1,No
+S012,Wrenfield Industries,14-day returns (restocking fee applies),Regional wholesale distributor,18,4.7,3.9,2.0,3.53,No
+S013,Coral Reef Imports,No returns accepted,Regional wholesale distributor,5,4.2,3.3,3.5,3.67,No
+S014,Ironclad Hardware Co.,14-day returns (restocking fee applies),Overseas manufacturer (India),3,2.3,2.1,1.9,2.1,No
+S015,Maplewood Provisions,30-day free returns,Overseas manufacturer (China),18,3.1,5.0,3.4,3.83,No
+S016,Solstice Sports Supply,14-day returns (restocking fee applies),Third-party liquidation stock,1,4.3,3.0,2.5,3.27,No
+S017,Driftwood Furnishings,"No returns, exchanges only",Direct from artisan co-op,17,4.9,4.3,3.3,4.17,Yes
+S018,Granite Peak Tools,30-day free returns,Domestic manufacturer (Mexico),16,2.5,4.3,3.4,3.4,Yes
+S019,Sunburst Organics,"90-day returns, full refund",Regional wholesale distributor,2,2.3,3.1,4.9,3.43,Yes
+S020,Vertex Electronics Ltd.,"45-day returns, store credit only",Overseas manufacturer (China),18,4.6,4.8,1.8,3.73,Yes
+S021,Willow Creek Crafts,"90-day returns, full refund",Domestic manufacturer (Canada),14,2.4,3.4,3.4,3.07,Yes
+S022,Anchor Point Marine,"90-day returns, full refund",Overseas manufacturer (India),12,4.8,4.3,3.9,4.33,No
+S023,Foxglove Botanicals,"No returns, exchanges only",Domestic manufacturer (Mexico),1,4.7,3.4,2.4,3.5,Yes
+S024,Steel Horizon Auto Parts,30-day free returns,Regional wholesale distributor,3,3.8,2.0,4.0,3.27,Yes
+S025,Cobblestone Kitchenware,"45-day returns, store credit only",Regional wholesale distributor,18,4.6,2.2,2.3,3.03,Yes

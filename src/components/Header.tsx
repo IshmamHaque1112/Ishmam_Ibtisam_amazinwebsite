@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ route }) => {
-  const { username, cartItems } = useStore();
+  const { username, cartItems, logout } = useStore();
   const [searchOpen, setSearchOpen] = useState(route.name === 'search');
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -59,20 +59,35 @@ const Header: React.FC<HeaderProps> = ({ route }) => {
               <SearchIcon />
             </button>
 
-            <a
-              href={href.login()}
+            <button
+              type="button"
+              onClick={async () => {
+                if (username) {
+                  await logout();
+                  window.location.hash = href.products();
+                } else {
+                  window.location.hash = href.login();
+                }
+              }}
               className={`${iconButton} flex items-center gap-1`}
               aria-label={username ? `Account: ${username}` : 'Log in'}
-              title={username ? `Logged in as ${username}` : 'Log in'}
+              title={username ? `Logged in as ${username} - click to logout` : 'Log in'}
             >
               <KeyIcon />
               {username && (
                 <span className="hidden sm:inline text-xs text-gray-300 max-w-[120px] truncate">{username}</span>
               )}
-            </a>
+            </button>
 
-            <a
-              href={username ? href.cart() : href.login(href.cart())}
+            <button
+              type="button"
+              onClick={() => {
+                if (username) {
+                  window.location.hash = href.cart();
+                } else {
+                  window.location.hash = href.login(href.cart());
+                }
+              }}
               className={iconButton}
               aria-label={`Cart, ${cartCount} items`}
               title="Cart"
@@ -83,7 +98,7 @@ const Header: React.FC<HeaderProps> = ({ route }) => {
                   {cartCount}
                 </span>
               )}
-            </a>
+            </button>
           </div>
         </div>
       </div>

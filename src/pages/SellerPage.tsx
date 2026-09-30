@@ -5,7 +5,6 @@ import { href } from '../router';
 import { calculateSellerRating } from '../utils/ratingCalculations';
 import { SellerLogo, Stars } from '../components/Icons';
 import ProductRow from '../components/ProductRow';
-import RatingGraph from '../components/RatingGraph';
 import NotFoundPage from './NotFoundPage';
 
 const RatingBar: React.FC<{ label: string; value: number }> = ({ label, value }) => (
@@ -188,13 +187,6 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
           <p className="text-sm text-gray-600">No tags yet. Be the first to tag this seller!</p>
         )}
       </div>
-
-      {/* Rating Graph */}
-      {reviews.length > 0 && (
-        <div className="mt-6">
-          <RatingGraph reviews={reviews} />
-        </div>
-      )}
 
       {/* Reviews */}
       <div className="mt-6 bg-white border rounded-lg p-4">

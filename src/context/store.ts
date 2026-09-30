@@ -8,6 +8,7 @@ import {
   saveUserData
 } from '../utils/storage';
 import { isPriceLockValid } from '../utils/ratingCalculations';
+import { supabase } from '../lib/supabase';
 
 interface StoreState {
   username: string | null;
@@ -16,8 +17,8 @@ interface StoreState {
   savedItems: SavedItem[];
 
   // Session
-  login: (username: string) => void;
-  logout: () => void;
+  login: (username: string, password?: string) => Promise<void>;
+  logout: () => Promise<void>;
 
   // Cart
   addToCart: (product: Product, folderId?: string, quantity?: number) => void;
@@ -62,13 +63,44 @@ export const useStore = create<StoreState>((set, get) => ({
   username: initialUsername,
   ...loadCart(initialUsername),
 
-  login: (username: string) => {
+  login: async (username: string, password?: string) => {
+    // Try Supabase Auth first if password is provided
+    if (password) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: `${username}@example.com`, // Using username as email placeholder
+          password: password
+        });
+        
+        if (error) {
+          console.error('Supabase auth error:', error);
+          // Fall back to localStorage if Supabase fails
+        } else {
+          setCurrentUsername(username);
+          set({ username, ...loadCart(username) });
+          return;
+        }
+      } catch (err) {
+        console.error('Supabase auth error:', err);
+        // Fall back to localStorage
+      }
+    }
+    
+    // Fallback to localStorage-based auth
     setCurrentUsername(username);
     set({ username, ...loadCart(username) });
   },
 
-  logout: () => {
+  logout: async () => {
     get().saveCurrentState();
+    
+    // Sign out from Supabase if logged in
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Supabase logout error:', err);
+    }
+    
     clearCurrentUsername();
     set({ username: null, cartItems: [], cartFolders: [], savedItems: [] });
   },
