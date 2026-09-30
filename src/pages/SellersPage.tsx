@@ -1,9 +1,11 @@
 import React from 'react';
 import { useDb } from '../db/DbProvider';
 import SellerRow from '../components/SellerRow';
+import { useDocumentTitle } from '../router';
 
 const SellersPage: React.FC = () => {
   const db = useDb();
+  useDocumentTitle('3rd party sellers');
   const sellers = db.getSellers();
   const counts = db.getSellerProductCounts();
 

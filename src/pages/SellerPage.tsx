@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useDb } from '../db/DbProvider';
 import { useStore } from '../context/store';
-import { href } from '../router';
+import { href, useDocumentTitle } from '../router';
 import { calculateSellerRating } from '../utils/ratingCalculations';
 import { SellerLogo, Stars } from '../components/Icons';
 import ProductRow from '../components/ProductRow';
 import RatingGraph from '../components/RatingGraph';
+import { ReviewForm, TagForm } from '../components/FeedbackForms';
 import NotFoundPage from './NotFoundPage';
 
 const RatingBar: React.FC<{ label: string; value: number }> = ({ label, value }) => (
@@ -32,12 +33,8 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
   // before the early "not found" return below rather than after it.
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showTagForm, setShowTagForm] = useState(false);
-  const [newTag, setNewTag] = useState('');
-  const [reviewForm, setReviewForm] = useState({
-    rating: 5,
-    title: '',
-    reviewText: ''
-  });
+  const [notice, setNotice] = useState<string | null>(null);
+  useDocumentTitle(seller ? seller.name : 'Seller not found');
 
   // A review excerpt in a seller row links here with ?review=<id>; once that
   // review renders below, scroll it into view automatically.
@@ -63,60 +60,45 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
     products.map(p => [p.id, db.getProductReviews(p.id)])
   );
 
-  const handleReviewSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username) return;
-    
-    try {
-      await db.addSellerReview({
-        sellerId: id,
-        username,
-        rating: reviewForm.rating,
-        title: reviewForm.title || undefined,
-        reviewText: reviewForm.reviewText || undefined,
-        reviewDate: new Date().toISOString().slice(0, 10),
-        helpfulVotes: 0
-      });
-    } catch {
-      alert('Sorry, your review could not be saved. Please try again.');
-      return;
-    }
-    
-    setShowReviewForm(false);
-    setReviewForm({ rating: 5, title: '', reviewText: '' });
-    window.location.reload();
+  const saveReview = async (review: { rating: number; title?: string; reviewText?: string }) => {
+    if (!username) throw new Error('Not logged in');
+    await db.addSellerReview({
+      sellerId: id,
+      username,
+      ...review,
+      reviewDate: new Date().toISOString().slice(0, 10),
+      helpfulVotes: 0
+    });
   };
 
-  const handleTagSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username || !newTag.trim()) return;
-    
-    try {
-      await db.addSellerTag({
-        sellerId: id,
-        tagName: newTag.trim(),
-        addedByUsername: username,
-        dateAdded: new Date().toISOString().slice(0, 10)
-      });
-    } catch {
-      alert('Sorry, your tag could not be saved. Please try again.');
-      return;
-    }
-    
-    setNewTag('');
-    setShowTagForm(false);
-    window.location.reload();
+  const saveTag = async (tagName: string) => {
+    if (!username) throw new Error('Not logged in');
+    await db.addSellerTag({
+      sellerId: id,
+      tagName,
+      addedByUsername: username,
+      dateAdded: new Date().toISOString().slice(0, 10)
+    });
   };
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4">
       <a href={href.sellers()} className="text-sm text-amazin-blue hover:underline">← All sellers</a>
 
+      {notice && (
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-900" role="status">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice(null)} className="text-green-900 hover:underline" aria-label="Dismiss message">
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <div className="mt-3 bg-white border rounded-lg p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <div className="flex items-center gap-3">
             <SellerLogo sellerId={seller.id} className="w-14 h-14" />
-            <h1 className="text-2xl font-bold text-gray-900">{seller.name}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{seller.name}</h1>
           </div>
           <p className="text-sm text-gray-600">Seller ID {seller.id}</p>
           <div className="mt-1"><Stars rating={reviewAverage || seller.overallRating} /></div>
@@ -156,33 +138,30 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
       <div className="mt-6 bg-white border rounded-lg p-4">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-semibold text-gray-900">Customer tags</h2>
-          {username && (
+          {username ? (
             <button
+              type="button"
               onClick={() => setShowTagForm(!showTagForm)}
               className="text-sm text-amazin-blue hover:underline"
+              aria-expanded={showTagForm}
             >
               {showTagForm ? 'Cancel' : '+ Add tag'}
             </button>
+          ) : (
+            <a href={href.login(href.seller(id))} className="text-sm text-amazin-blue hover:underline">
+              Log in to add a tag
+            </a>
           )}
         </div>
         {showTagForm && (
-          <form onSubmit={handleTagSubmit} className="mb-3">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                placeholder="Enter a tag"
-                className="flex-1 text-sm border rounded px-3 py-1.5"
-              />
-              <button
-                type="submit"
-                className="text-sm bg-amazin-orange text-amazin-dark px-3 py-1.5 rounded hover:bg-orange-600"
-              >
-                Add
-              </button>
-            </div>
-          </form>
+          <TagForm
+            existing={tags.map(t => t.tagName)}
+            onSubmit={saveTag}
+            onDone={() => {
+              setShowTagForm(false);
+              setNotice('Thanks! Your tag was added.');
+            }}
+          />
         )}
         {tags.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -205,63 +184,32 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
       <div className="mt-6 bg-white border rounded-lg p-4">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-semibold text-gray-900">Customer reviews ({reviews.length})</h2>
-          {username && (
+          {username ? (
             <button
+              type="button"
               onClick={() => setShowReviewForm(!showReviewForm)}
               className="text-sm text-amazin-blue hover:underline"
+              aria-expanded={showReviewForm}
             >
               {showReviewForm ? 'Cancel' : '+ Write a review'}
             </button>
+          ) : (
+            <a href={href.login(href.seller(id))} className="text-sm text-amazin-blue hover:underline">
+              Log in to write a review
+            </a>
           )}
         </div>
 
         {showReviewForm && (
-          <form onSubmit={handleReviewSubmit} className="bg-gray-50 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Write a review</h3>
-            <div className="mb-3">
-              <label className="block text-sm text-gray-700 mb-1">Rating</label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setReviewForm({ ...reviewForm, rating: star })}
-                    className={`text-2xl ${reviewForm.rating >= star ? 'text-amazin-orange' : 'text-gray-300'}`}
-                  >
-                    ★
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm text-gray-700 mb-1">Title (optional)</label>
-              <input
-                type="text"
-                value={reviewForm.title}
-                onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })}
-                className="w-full text-sm border rounded px-3 py-1.5"
-                placeholder="Summarize your review"
-              />
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm text-gray-700 mb-1">Review (optional)</label>
-              <textarea
-                value={reviewForm.reviewText}
-                onChange={(e) => setReviewForm({ ...reviewForm, reviewText: e.target.value })}
-                className="w-full text-sm border rounded px-3 py-1.5"
-                rows={4}
-                placeholder="Share your experience with this seller"
-              />
-            </div>
-            <button
-              type="submit"
-              className="text-sm bg-amazin-orange text-amazin-dark px-4 py-2 rounded hover:bg-orange-600"
-            >
-              Submit review
-            </button>
-          </form>
+          <ReviewForm
+            subject="seller"
+            onSubmit={saveReview}
+            onDone={() => {
+              setShowReviewForm(false);
+              setNotice('Thanks! Your review was posted.');
+            }}
+          />
         )}
-
         {reviews.length > 0 ? (
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {reviews.map(review => (

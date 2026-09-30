@@ -1,57 +1,46 @@
 import React, { useState } from 'react';
 import { useDb } from '../db/DbProvider';
+import { USERNAME_PATTERN, normalizeUsername } from '../db/storeData';
 import { useStore } from '../context/store';
-import { href, navigate } from '../router';
-
-// Username validation pattern
-const USERNAME_PATTERN = /^[a-z0-9._-]{3,30}$/;
-const normalizeUsername = (username: string) => username.trim().toLowerCase();
+import { href, navigate, safeNext, useDocumentTitle } from '../router';
 
 interface LoginPageProps {
   params: URLSearchParams;
 }
 
-// Only allow redirects back into this app (hash routes), never to other sites.
-const safeNext = (next: string | null) => (next && next.startsWith('#/') && !next.startsWith('#/login') ? next : href.products());
-
+// Prototype sign-in: a username is all that's needed. There are no
+// passwords yet, so the page says so plainly instead of showing a password
+// box that doesn't check anything.
 const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
   const db = useDb();
   const { username: current, login, logout } = useStore();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const next = safeNext(params.get('next'));
   const cartRedirect = next === href.cart();
+  useDocumentTitle(mode === 'login' ? 'Log in' : 'Create an account');
 
-  const finish = async (name: string, pwd?: string) => {
-    setLoading(true);
-    try {
-      await login(name, pwd);
-      navigate(next);
-    } catch (err) {
-      setError('Login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  const finish = async (name: string) => {
+    await login(name);
+    navigate(next);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    
     try {
       const customer = await db.findCustomer(username);
       if (customer) {
-        await finish(customer.username, password);
+        await finish(customer.username);
       } else {
         setError(`No account found for "${normalizeUsername(username)}". You can create one below.`);
         setMode('register');
       }
-    } catch (err) {
+    } catch {
       setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
@@ -62,25 +51,29 @@ const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    
     try {
       const result = await db.registerCustomer(username, displayName);
       if (result.error || !result.customer) {
         setError(result.error ?? 'Something went wrong. Please try again.');
         return;
       }
-      // Note: In a real app, you'd want to handle the generated password properly
-      // For now, we'll just log in with the username
       await finish(result.customer.username);
-    } catch (err) {
+    } catch {
       setError('Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const switchMode = (to: 'login' | 'register') => {
+    setMode(to);
+    setError(null);
+  };
+
   const input = 'w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-amazin-orange focus:border-transparent';
-  const validUsername = USERNAME_PATTERN.test(normalizeUsername(username));
+  const normalized = normalizeUsername(username);
+  const validUsername = USERNAME_PATTERN.test(normalized);
+  const showUsernameHint = mode === 'register' && username.trim() !== '' && !validUsername;
 
   return (
     <div className="max-w-md mx-auto py-10 px-4">
@@ -91,7 +84,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
         <p className="text-sm text-gray-600 mb-4">
           {cartRedirect
             ? 'Log in to see your cart. You can keep browsing as a guest without an account.'
-            : 'Log in with your username to add items to your cart. Browsing is open to everyone.'}
+            : 'Log in with your username to use the cart, see your orders and post reviews. Browsing is open to everyone.'}
         </p>
 
         {current && (
@@ -116,55 +109,55 @@ const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
           <p className="text-sm bg-red-50 text-red-800 rounded p-2 mb-4" role="alert">{error}</p>
         )}
 
-        <form onSubmit={mode === 'login' ? handleLogin : handleRegister} className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">
-            Username
+        <form onSubmit={mode === 'login' ? handleLogin : handleRegister} className="space-y-4" noValidate>
+          <div>
+            <label htmlFor="login-username" className="block text-sm font-medium text-gray-700">
+              Username
+            </label>
             <input
+              id="login-username"
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
               className={`${input} mt-1`}
               placeholder="e.g. ava.nguyen"
               autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
               autoFocus
               maxLength={30}
+              aria-invalid={showUsernameHint}
+              aria-describedby="login-username-hint"
             />
-          </label>
-
-          {mode === 'login' && (
-            <label className="block text-sm font-medium text-gray-700">
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className={`${input} mt-1`}
-                placeholder="Enter your password"
-                autoComplete="current-password"
-              />
-            </label>
-          )}
+            <p id="login-username-hint" className={`text-xs mt-1 ${showUsernameHint ? 'text-red-800' : 'text-gray-600'}`}>
+              3-30 characters: letters, numbers, dots, dashes or underscores.
+            </p>
+          </div>
 
           {mode === 'register' && (
-            <label className="block text-sm font-medium text-gray-700">
-              Display name
+            <div>
+              <label htmlFor="login-display-name" className="block text-sm font-medium text-gray-700">
+                Display name
+              </label>
               <input
+                id="login-display-name"
                 type="text"
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
                 className={`${input} mt-1`}
                 placeholder="e.g. Ava Nguyen"
+                autoComplete="name"
                 maxLength={60}
               />
-            </label>
+            </div>
           )}
 
           <button
             type="submit"
             disabled={loading || (mode === 'login' ? !username.trim() : !validUsername || !displayName.trim())}
-            className="w-full bg-amazin-orange hover:bg-amazin-yellow text-white font-semibold py-2 rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="w-full bg-amazin-orange hover:bg-amazin-yellow text-gray-900 font-semibold py-2 rounded disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
           >
-            {loading ? 'Processing...' : (mode === 'login' ? 'Log in' : 'Create account')}
+            {loading ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Create account'}
           </button>
         </form>
 
@@ -172,24 +165,23 @@ const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
           {mode === 'login' ? (
             <>
               New to Amazin?{' '}
-              <button type="button" className="text-amazin-blue hover:underline" onClick={() => { setMode('register'); setError(null); }}>
+              <button type="button" className="text-amazin-blue hover:underline" onClick={() => switchMode('register')}>
                 Create an account
               </button>
             </>
           ) : (
             <>
               Already have an account?{' '}
-              <button type="button" className="text-amazin-blue hover:underline" onClick={() => { setMode('login'); setError(null); }}>
+              <button type="button" className="text-amazin-blue hover:underline" onClick={() => switchMode('login')}>
                 Log in
               </button>
             </>
           )}
         </p>
-        {mode === 'register' && (
-          <p className="text-xs text-gray-500 mt-2">
-            Usernames are 3-30 characters: letters, numbers, dots, dashes or underscores. A password will be generated automatically.
-          </p>
-        )}
+        <p className="text-xs text-gray-600 mt-3 border-t pt-3">
+          Demo accounts use a username only. There are no passwords yet, so don't use this site for anything
+          private. Try <strong>ava.nguyen</strong> to look around.
+        </p>
       </div>
     </div>
   );
