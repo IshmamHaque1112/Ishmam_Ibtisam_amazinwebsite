@@ -1,34 +1,59 @@
 import { create } from 'zustand';
-import { CartItem, CartFolder, Product, SavedItem } from '../types';
+import { CartItem, CartFolder, Order, Product, SavedItem, Seller } from '../types';
 import {
   getCurrentUsername,
   setCurrentUsername,
   clearCurrentUsername,
   getOrCreateUserData,
-  saveUserData
+  saveUserData,
+  userStorageKey
 } from '../utils/storage';
 import { isPriceLockValid } from '../utils/ratingCalculations';
-import { supabase } from '../lib/supabase';
+import { clampQuantity, MAX_QUANTITY } from '../utils/cartPricing';
+import { buildOrder, newOrderId, splitReorderable } from '../utils/orders';
+import {
+  findFolderByName,
+  moveItem,
+  newFolderId,
+  organizeByCategory as organizeItemsByCategory,
+  sameLine,
+  selectOnlyFolder as selectOnly,
+  setFolderSelection
+} from '../utils/cartFolders';
 
 interface StoreState {
   username: string | null;
   cartItems: CartItem[];
   cartFolders: CartFolder[];
   savedItems: SavedItem[];
+  orders: Order[];
+  // When on, items added without a folder go into a folder named after
+  // their category.
+  autoCategoryFolders: boolean;
+  // Set when the browser refused to save (storage full or blocked).
+  storageError: boolean;
 
-  // Session
-  login: (username: string, password?: string) => Promise<void>;
+  // Session (prototype: username only, no passwords)
+  login: (username: string) => Promise<void>;
   logout: () => Promise<void>;
 
-  // Cart
-  addToCart: (product: Product, folderId?: string, quantity?: number) => void;
+  // Cart. addToCart returns how many units were actually added (0 when the
+  // line is already at MAX_QUANTITY).
+  addToCart: (product: Product, folderId?: string, quantity?: number) => number;
   removeFromCart: (itemId: string) => void;
   updateCartItemQuantity: (itemId: string, quantity: number) => void;
   toggleCartItemSelection: (itemId: string) => void;
   setAllCartItemsSelected: (selected: boolean) => void;
+  // Folder selection (folderId undefined = Unassigned items)
+  setFolderSelected: (folderId: string | undefined, selected: boolean) => void;
+  selectOnlyFolder: (folderId: string | undefined) => void;
   togglePriceLock: (itemId: string, currentPrice: number) => void;
   checkoutSelectedItems: () => CartItem[];
   checkoutItems: (itemIds: string[]) => CartItem[];
+
+  // Orders (demo checkout, no payment)
+  placeOrder: (itemIds: string[], products: Product[], sellers: Seller[], folderName?: string) => Order | null;
+  buyAgain: (orderId: string, products: Product[]) => { added: number; unavailable: number };
 
   // Save for later
   saveForLater: (itemId: string, currentPrice: number) => string | null;
@@ -40,92 +65,79 @@ interface StoreState {
   deleteFolder: (folderId: string) => void;
   moveItemToFolder: (itemId: string, folderId: string | undefined) => void;
   moveItemToNewFolder: (itemId: string, name: string) => void;
+  organizeByCategory: (products: Product[]) => number;
+  setAutoCategoryFolders: (on: boolean) => void;
 
   saveCurrentState: () => void;
 }
 
 const loadCart = (username: string | null) => {
-  if (!username) return { cartItems: [], cartFolders: [], savedItems: [] };
+  if (!username) return { cartItems: [], cartFolders: [], savedItems: [], orders: [], autoCategoryFolders: false };
   const data = getOrCreateUserData(username);
   return {
     cartItems: data.cart.items,
     cartFolders: data.cart.folders,
-    savedItems: data.cart.saved ?? []
+    savedItems: data.cart.saved ?? [],
+    orders: data.orders ?? [],
+    autoCategoryFolders: data.settings?.autoCategoryFolders ?? false
   };
 };
-
-const sameLine = (a: CartItem, b: CartItem) =>
-  a.productId === b.productId && a.sellerId === b.sellerId && a.folderId === b.folderId;
 
 const initialUsername = typeof window !== 'undefined' ? getCurrentUsername() : null;
 
 export const useStore = create<StoreState>((set, get) => ({
   username: initialUsername,
   ...loadCart(initialUsername),
+  storageError: false,
 
-  login: async (username: string, password?: string) => {
-    // Try Supabase Auth first if password is provided
-    if (password && supabase) {
-      try {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: `${username}@example.com`, // Using username as email placeholder
-          password: password
-        });
-        
-        if (error) {
-          console.error('Supabase auth error:', error);
-          // Fall back to localStorage if Supabase fails
-        } else {
-          setCurrentUsername(username);
-          set({ username, ...loadCart(username) });
-          return;
-        }
-      } catch (err) {
-        console.error('Supabase auth error:', err);
-        // Fall back to localStorage
-      }
-    }
-    
-    // Fallback to localStorage-based auth
+  // The prototype signs in by username only. The old password box accepted
+  // any password (it tried Supabase Auth with a made-up email and fell back to
+  // logging in anyway), so it was removed rather than left as a fake check.
+  login: async (username: string) => {
     setCurrentUsername(username);
     set({ username, ...loadCart(username) });
   },
 
   logout: async () => {
     get().saveCurrentState();
-    
-    // Sign out from Supabase if logged in
-    try {
-      await supabase?.auth.signOut();
-    } catch (err) {
-      console.error('Supabase logout error:', err);
-    }
-    
     clearCurrentUsername();
-    set({ username: null, cartItems: [], cartFolders: [], savedItems: [] });
+    set({ username: null, cartItems: [], cartFolders: [], savedItems: [], orders: [], autoCategoryFolders: false });
   },
 
   // Guests can browse, but the cart belongs to a logged-in user.
-  addToCart: (product: Product, folderId?: string, quantity = 1) => {
-    const { cartItems, username } = get();
-    if (!username) return;
+  addToCart: (product: Product, requestedFolderId?: string, quantity = 1) => {
+    const { cartItems, username, autoCategoryFolders, cartFolders } = get();
+    if (!username) return 0;
+
+    // With auto category folders on, an item added without a folder goes to
+    // the folder named after its category (created if needed).
+    let folderId = requestedFolderId;
+    if (!folderId && autoCategoryFolders) {
+      const existingFolder = findFolderByName(cartFolders, product.category);
+      folderId = existingFolder ? existingFolder.id : get().createFolder(product.category);
+    }
 
     const existingItem = cartItems.find(
       item => item.productId === product.id && item.sellerId === product.sellerId && item.folderId === folderId
     );
 
+    let added: number;
     if (existingItem) {
+      const nextQuantity = Math.min(MAX_QUANTITY, existingItem.quantity + quantity);
+      added = Math.max(0, nextQuantity - existingItem.quantity);
+      if (added === 0) return 0;
       set({
         cartItems: cartItems.map(item =>
-          item.id === existingItem.id ? { ...item, quantity: item.quantity + quantity } : item
+          item.id === existingItem.id ? { ...item, quantity: nextQuantity } : item
         )
       });
     } else {
+      added = clampQuantity(quantity);
       const newItem: CartItem = {
         id: `${product.id}-${product.sellerId}-${Date.now()}`,
         productId: product.id,
         sellerId: product.sellerId,
-        quantity,
+        quantity: added,
         folderId,
         isSelected: true,
         priceLocked: false,
@@ -134,6 +146,7 @@ export const useStore = create<StoreState>((set, get) => ({
       set({ cartItems: [...cartItems, newItem] });
     }
     get().saveCurrentState();
+    return added;
   },
 
   removeFromCart: (itemId: string) => {
@@ -147,7 +160,9 @@ export const useStore = create<StoreState>((set, get) => ({
       return;
     }
     set({
-      cartItems: get().cartItems.map(item => (item.id === itemId ? { ...item, quantity } : item))
+      cartItems: get().cartItems.map(item =>
+        item.id === itemId ? { ...item, quantity: Math.min(MAX_QUANTITY, Math.floor(quantity)) } : item
+      )
     });
     get().saveCurrentState();
   },
@@ -163,6 +178,16 @@ export const useStore = create<StoreState>((set, get) => ({
 
   setAllCartItemsSelected: (selected: boolean) => {
     set({ cartItems: get().cartItems.map(item => ({ ...item, isSelected: selected })) });
+    get().saveCurrentState();
+  },
+
+  setFolderSelected: (folderId: string | undefined, selected: boolean) => {
+    set({ cartItems: setFolderSelection(get().cartItems, folderId, selected) });
+    get().saveCurrentState();
+  },
+
+  selectOnlyFolder: (folderId: string | undefined) => {
+    set({ cartItems: selectOnly(get().cartItems, folderId) });
     get().saveCurrentState();
   },
 
@@ -203,6 +228,36 @@ export const useStore = create<StoreState>((set, get) => ({
     return purchased;
   },
 
+  // Records a demo order for these cart lines, then removes them from the
+  // cart. No payment is taken. Returns null if none of the lines could be
+  // priced (for example, the products were removed from the catalog).
+  placeOrder: (itemIds: string[], products: Product[], sellers: Seller[], folderName?: string) => {
+    const { cartItems, orders } = get();
+    const ids = new Set(itemIds);
+    const lines = cartItems.filter(item => ids.has(item.id));
+    const now = Date.now();
+    const order = buildOrder(lines, products, sellers, { id: newOrderId(now), placedAt: now, folderName });
+    if (!order) return null;
+    set({
+      cartItems: cartItems.filter(item => !ids.has(item.id)),
+      orders: [order, ...orders]
+    });
+    get().saveCurrentState();
+    return order;
+  },
+
+  // Adds the lines of a past order back to the cart at today's prices.
+  buyAgain: (orderId: string, products: Product[]) => {
+    const order = get().orders.find(o => o.id === orderId);
+    if (!order) return { added: 0, unavailable: 0 };
+    const { available, unavailable } = splitReorderable(order, products);
+    let added = 0;
+    for (const { line, product } of available) {
+      added += get().addToCart(product, undefined, line.quantity);
+    }
+    return { added, unavailable: unavailable.length };
+  },
+
   // Moves a cart line to the saved list. The price lock (and its 24h timer)
   // and the folder travel with it. Returns the saved item's id for Undo.
   saveForLater: (itemId: string, currentPrice: number) => {
@@ -233,7 +288,9 @@ export const useStore = create<StoreState>((set, get) => ({
     set({
       savedItems: savedItems.filter(i => i.id !== savedId),
       cartItems: existing
-        ? cartItems.map(i => (i.id === existing.id ? { ...i, quantity: i.quantity + restored.quantity } : i))
+        ? cartItems.map(i =>
+            i.id === existing.id ? { ...i, quantity: clampQuantity(i.quantity + restored.quantity) } : i
+          )
         : [...cartItems, restored]
     });
     get().saveCurrentState();
@@ -244,12 +301,13 @@ export const useStore = create<StoreState>((set, get) => ({
     get().saveCurrentState();
   },
 
+  // Creating a folder with a name that already exists returns the existing
+  // folder instead of making a duplicate.
   createFolder: (name: string) => {
-    const folder: CartFolder = {
-      id: `folder-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name,
-      createdAt: Date.now()
-    };
+    const trimmed = name.trim().slice(0, 40);
+    const existing = findFolderByName(get().cartFolders, trimmed);
+    if (existing) return existing.id;
+    const folder: CartFolder = { id: newFolderId(), name: trimmed, createdAt: Date.now() };
     set({ cartFolders: [...get().cartFolders, folder] });
     get().saveCurrentState();
     return folder.id;
@@ -267,18 +325,7 @@ export const useStore = create<StoreState>((set, get) => ({
   // If the destination folder already has the same product from the same
   // seller, the quantities are combined so the folder doesn't show it twice.
   moveItemToFolder: (itemId: string, folderId: string | undefined) => {
-    const { cartItems } = get();
-    const item = cartItems.find(i => i.id === itemId);
-    if (!item || item.folderId === folderId) return;
-    const moved = { ...item, folderId };
-    const existing = cartItems.find(i => i.id !== itemId && sameLine(i, moved));
-    set({
-      cartItems: existing
-        ? cartItems
-            .filter(i => i.id !== itemId)
-            .map(i => (i.id === existing.id ? { ...i, quantity: i.quantity + item.quantity } : i))
-        : cartItems.map(i => (i.id === itemId ? moved : i))
-    });
+    set({ cartItems: moveItem(get().cartItems, itemId, folderId) });
     get().saveCurrentState();
   },
 
@@ -289,13 +336,42 @@ export const useStore = create<StoreState>((set, get) => ({
     get().moveItemToFolder(itemId, folderId);
   },
 
+  // Files every unassigned item into a folder named after its category.
+  // Returns how many items moved.
+  organizeByCategory: (products: Product[]) => {
+    const { cartItems, cartFolders } = get();
+    const result = organizeItemsByCategory(cartItems, cartFolders, products);
+    if (result.moved === 0) return 0;
+    set({ cartItems: result.items, cartFolders: result.folders });
+    get().saveCurrentState();
+    return result.moved;
+  },
+
+  setAutoCategoryFolders: (on: boolean) => {
+    set({ autoCategoryFolders: on });
+    get().saveCurrentState();
+  },
+
   saveCurrentState: () => {
-    const { username, cartItems, cartFolders, savedItems } = get();
+    const { username, cartItems, cartFolders, savedItems, orders, autoCategoryFolders, storageError } = get();
     if (username) {
-      saveUserData(username, {
+      const saved = saveUserData(username, {
         username,
-        cart: { items: cartItems, folders: cartFolders, saved: savedItems }
+        cart: { items: cartItems, folders: cartFolders, saved: savedItems },
+        orders,
+        settings: { autoCategoryFolders }
       });
+      if (saved === storageError) set({ storageError: !saved });
     }
   }
 }));
+
+// Keep the cart in step when the same account changes it in another tab.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', event => {
+    const { username } = useStore.getState();
+    if (username && event.key === userStorageKey(username)) {
+      useStore.setState(loadCart(username));
+    }
+  });
+}
