@@ -23,10 +23,10 @@ const FreeShippingProgress: React.FC<FreeShippingProgressProps> = ({
     <div className="bg-white border rounded-lg p-4" data-testid="free-shipping-progress">
       <p className="text-sm font-medium text-gray-900 mb-2">
         {qualifies ? (
-          <span className="text-green-700">🎉 Your order qualifies for FREE shipping</span>
+          <span className="text-green-700"><span aria-hidden="true">🎉 </span>Your order qualifies for FREE shipping</span>
         ) : (
           <>
-            Add <span className="font-bold text-amazin-orange">{formatMoney(amountToFreeShipping)}</span> more to get FREE shipping
+            Add <span className="font-bold text-amber-800">{formatMoney(amountToFreeShipping)}</span> more to get FREE shipping
           </>
         )}
       </p>
@@ -43,7 +43,7 @@ const FreeShippingProgress: React.FC<FreeShippingProgressProps> = ({
           style={{ width: `${percent}%` }}
         />
       </div>
-      <p className="text-xs text-gray-500 mt-1">
+      <p className="text-xs text-gray-600 mt-1">
         {formatMoney(subtotal)} of {formatMoney(FREE_SHIPPING_THRESHOLD)} (selected items)
       </p>
     </div>

@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Vite only exposes variables prefixed with VITE_. On Vercel these must be set
 // in Project Settings → Environment Variables (then redeploy), because Vite
@@ -8,12 +8,24 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undef
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-// Never throw at import time: a missing variable used to crash the whole site
-// with a blank page. Without credentials the store falls back to the bundled
-// CSV data (see src/db/storeData.ts).
-export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(supabaseUrl as string, supabaseAnonKey as string)
-  : null;
+let clientPromise: Promise<SupabaseClient | null> | null = null;
+
+// The Supabase client is loaded on demand. When the keys aren't set (CSV
+// mode) its code is never downloaded, which keeps the main bundle smaller.
+// Never throws: without a client the store falls back to the bundled CSV data
+// (see src/db/storeData.ts).
+export const getSupabase = (): Promise<SupabaseClient | null> => {
+  if (!isSupabaseConfigured) return Promise.resolve(null);
+  if (!clientPromise) {
+    clientPromise = import('@supabase/supabase-js')
+      .then(({ createClient }) => createClient(supabaseUrl as string, supabaseAnonKey as string))
+      .catch(error => {
+        console.error('Could not load the Supabase client:', error);
+        return null;
+      });
+  }
+  return clientPromise;
+};
 
 if (!isSupabaseConfigured) {
   console.warn(

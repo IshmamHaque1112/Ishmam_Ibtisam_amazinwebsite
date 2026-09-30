@@ -2,6 +2,9 @@ import { UserSession } from '../types';
 
 const STORAGE_KEY_PREFIX = 'amazon_marketplace_';
 
+// localStorage key holding one user's cart, saved items and orders.
+export const userStorageKey = (username: string): string => `${STORAGE_KEY_PREFIX}${username}`;
+
 // Browser storage can be unavailable (private mode, blocked site data), so
 // every access is guarded.
 
@@ -31,7 +34,7 @@ export const clearCurrentUsername = (): void => {
 
 export const getUserData = (username: string): UserSession | null => {
   try {
-    const data = localStorage.getItem(`${STORAGE_KEY_PREFIX}${username}`);
+    const data = localStorage.getItem(userStorageKey(username));
     return data ? JSON.parse(data) : null;
   } catch (error) {
     console.error('Error reading user data:', error);
@@ -39,11 +42,15 @@ export const getUserData = (username: string): UserSession | null => {
   }
 };
 
-export const saveUserData = (username: string, data: UserSession): void => {
+// Returns false when the browser refused the write (storage full or blocked),
+// so callers can tell the shopper their changes won't survive a reload.
+export const saveUserData = (username: string, data: UserSession): boolean => {
   try {
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${username}`, JSON.stringify(data));
+    localStorage.setItem(userStorageKey(username), JSON.stringify(data));
+    return true;
   } catch (error) {
     console.error('Error saving user data:', error);
+    return false;
   }
 };
 

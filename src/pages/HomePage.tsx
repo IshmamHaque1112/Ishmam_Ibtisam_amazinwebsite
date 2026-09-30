@@ -1,12 +1,14 @@
 import React from 'react';
 import hero from '../assets/home-hero.jpg';
 import logo from '../assets/logo-full.png';
-import { href } from '../router';
+import { href, useDocumentTitle } from '../router';
 
-const HomePage: React.FC = () => (
+const HomePage: React.FC = () => {
+  useDocumentTitle('');
+  return (
   <div className="bg-white">
     <section className="relative isolate min-h-[480px] flex items-center overflow-hidden bg-gray-900">
-      <img src={hero} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" />
+      <img src={hero} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover" decoding="async" />
       <div className="absolute inset-0 -z-10 bg-gradient-to-r from-gray-950/90 via-gray-950/65 to-gray-950/20" />
       <div className="max-w-7xl mx-auto w-full px-6 py-16 text-white">
         <span className="mb-5 inline-flex rounded-lg bg-white px-3 py-1">
@@ -30,6 +32,7 @@ const HomePage: React.FC = () => (
       </div>
     </section>
   </div>
-);
+  );
+};
 
 export default HomePage;

@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ route }) => {
-  const { username, cartItems, logout } = useStore();
+  const { username, cartItems } = useStore();
   const [searchOpen, setSearchOpen] = useState(route.name === 'search');
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -27,7 +27,7 @@ const Header: React.FC<HeaderProps> = ({ route }) => {
     </a>
   );
 
-  const iconButton = 'p-2 rounded hover:bg-white/10 hover:text-amazin-orange relative';
+  const iconButton = 'p-2 rounded hover:bg-white/10 hover:text-amazin-orange relative inline-flex';
 
   return (
     <header className="sticky top-0 z-40">
@@ -60,46 +60,38 @@ const Header: React.FC<HeaderProps> = ({ route }) => {
               <SearchIcon />
             </button>
 
-            <button
-              type="button"
-              onClick={async () => {
-                if (username) {
-                  await logout();
-                  window.location.hash = href.products();
-                } else {
-                  window.location.hash = href.login();
-                }
-              }}
-              className={`${iconButton} flex items-center gap-1`}
-              aria-label={username ? `Account: ${username}` : 'Log in'}
-              title={username ? `Logged in as ${username} - click to logout` : 'Log in'}
+            {/* Logged in: opens the account page (orders, log out).
+                Previously this icon logged the shopper out with one click. */}
+            <a
+              href={username ? href.account() : href.login()}
+              className={`${iconButton} flex items-center gap-1 ${route.name === 'account' ? 'text-amazin-orange' : ''}`}
+              aria-label={username ? `Your account and orders (${username})` : 'Log in'}
+              aria-current={route.name === 'account' ? 'page' : undefined}
+              title={username ? `Logged in as ${username}` : 'Log in'}
             >
               <KeyIcon />
               {username && (
-                <span className="hidden sm:inline text-xs text-gray-300 max-w-[120px] truncate">{username}</span>
+                <span className="hidden sm:inline text-xs text-gray-200 max-w-[120px] truncate">{username}</span>
               )}
-            </button>
+            </a>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (username) {
-                  window.location.hash = href.cart();
-                } else {
-                  window.location.hash = href.login(href.cart());
-                }
-              }}
-              className={iconButton}
-              aria-label={`Cart, ${cartCount} items`}
+            <a
+              href={username ? href.cart() : href.login(href.cart())}
+              className={`${iconButton} ${route.name === 'cart' ? 'text-amazin-orange' : ''}`}
+              aria-label={username ? `Cart, ${cartCount} ${cartCount === 1 ? 'item' : 'items'}` : 'Cart (log in to view)'}
+              aria-current={route.name === 'cart' ? 'page' : undefined}
               title="Cart"
             >
               <CartIcon />
               {cartCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-amazin-orange text-amazin-dark text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-0.5 -right-0.5 bg-amazin-orange text-amazin-dark text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center"
+                >
                   {cartCount}
                 </span>
               )}
-            </button>
+            </a>
           </div>
         </div>
       </div>

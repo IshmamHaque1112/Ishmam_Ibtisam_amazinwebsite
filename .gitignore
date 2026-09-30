@@ -30,3 +30,6 @@ dist-ssr
 
 # Vercel
 .vercel
+
+# Unit test build output
+.test-build

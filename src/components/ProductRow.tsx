@@ -64,7 +64,7 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
         </div>
         <div className="text-xs mt-1">
           <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full">{rating.badge}</span>
-          <span className="text-gray-500 ml-2">Score {rating.score}/100</span>
+          <span className="text-gray-600 ml-2">Score {rating.score}/100</span>
         </div>
 
         {/* Tags */}
@@ -80,7 +80,7 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
               </span>
             ))}
             {tags.length > 10 && (
-              <span className="text-xs text-gray-500">+{tags.length - 10} more</span>
+              <span className="text-xs text-gray-600">+{tags.length - 10} more</span>
             )}
           </div>
         )}
@@ -95,12 +95,14 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
           </a>
         )}
       </div>
-      <div className="text-right w-28">
-        <div className="font-bold text-gray-900">{formatMoney(product.currentPrice)}</div>
-        <div className="text-[11px] text-gray-500">Low {formatMoney(product.allTimeLowPrice)}</div>
-      </div>
-      <div className="w-full sm:w-auto sm:min-w-[130px] text-right">
-        <AddToCart product={product} compact />
+      <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-3 border-t sm:border-0 pt-2 sm:pt-0">
+        <div className="sm:text-right sm:w-28">
+          <div className="font-bold text-gray-900">{formatMoney(product.currentPrice)}</div>
+          <div className="text-xs text-gray-600">Low {formatMoney(product.allTimeLowPrice)}</div>
+        </div>
+        <div className="sm:min-w-[130px] text-right">
+          <AddToCart product={product} compact />
+        </div>
       </div>
     </li>
   );
