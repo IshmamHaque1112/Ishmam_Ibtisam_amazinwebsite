@@ -65,9 +65,9 @@ export const useStore = create<StoreState>((set, get) => ({
 
   login: async (username: string, password?: string) => {
     // Try Supabase Auth first if password is provided
-    if (password) {
+    if (password && supabase) {
       try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email: `${username}@example.com`, // Using username as email placeholder
           password: password
         });
@@ -96,7 +96,7 @@ export const useStore = create<StoreState>((set, get) => ({
     
     // Sign out from Supabase if logged in
     try {
-      await supabase.auth.signOut();
+      await supabase?.auth.signOut();
     } catch (err) {
       console.error('Supabase logout error:', err);
     }
