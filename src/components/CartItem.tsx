@@ -14,6 +14,9 @@ import {
   MAX_QUANTITY
 } from '../utils/cartPricing';
 
+// dataTransfer type used when dragging a cart line onto a folder.
+export const CART_ITEM_DRAG_TYPE = 'application/x-amazin-cart-item';
+
 interface CartItemProps {
   item: CartItemType;
   product: Product;
@@ -69,9 +72,23 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLa
       : 0;
 
   const atMax = item.quantity >= MAX_QUANTITY;
+  const [dragging, setDragging] = useState(false);
 
   return (
-    <div className={`border rounded-lg p-3 sm:p-4 ${!item.isSelected ? 'bg-gray-50' : 'bg-white'}`}>
+    <div
+      className={`border rounded-lg p-3 sm:p-4 ${!item.isSelected ? 'bg-gray-50' : 'bg-white'} ${dragging ? 'opacity-50' : ''}`}
+      // Desktop shortcut: drag the item onto a folder (or Unassigned items).
+      // The Folder dropdown does the same thing with a keyboard or on touch.
+      draggable
+      onDragStart={e => {
+        e.dataTransfer.setData(CART_ITEM_DRAG_TYPE, item.id);
+        e.dataTransfer.setData('text/plain', product.name);
+        e.dataTransfer.effectAllowed = 'move';
+        setDragging(true);
+      }}
+      onDragEnd={() => setDragging(false)}
+      data-testid="cart-item"
+    >
       <div className="flex items-start gap-3 sm:gap-4">
         {/* Selection Checkbox */}
         <div className="pt-1 sm:pt-2">

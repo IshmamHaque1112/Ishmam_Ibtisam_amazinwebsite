@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { useDb } from '../db/DbProvider';
 import { href, navigate } from '../router';
+import { getSuggestions, Suggestion } from '../utils/catalog';
 
 interface SearchBarProps {
   initial?: URLSearchParams;
@@ -19,6 +20,37 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
   const [category, setCategory] = useState(initial?.get('category') ?? '');
   const [sellerId, setSellerId] = useState(initial?.get('seller') ?? '');
   const [error, setError] = useState<string | null>(null);
+  // Autocomplete (ARIA combobox): suggestions update as the shopper types.
+  const listId = useId();
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const suggestions = open ? getSuggestions(text, db.getProducts(), sellers) : [];
+
+  const choose = (suggestion: Suggestion) => {
+    setOpen(false);
+    setActive(-1);
+    if (suggestion.kind === 'product') navigate(href.product(suggestion.productId));
+    else if (suggestion.kind === 'seller') navigate(href.seller(suggestion.sellerId));
+    else navigate(href.search(new URLSearchParams({ category: suggestion.label })));
+    onSearched?.();
+  };
+
+  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown' && suggestions.length) {
+      e.preventDefault();
+      setOpen(true);
+      setActive(i => (i + 1) % suggestions.length);
+    } else if (e.key === 'ArrowUp' && suggestions.length) {
+      e.preventDefault();
+      setActive(i => (i <= 0 ? suggestions.length - 1 : i - 1));
+    } else if (e.key === 'Enter' && open && active >= 0 && suggestions[active]) {
+      e.preventDefault();
+      choose(suggestions[active]);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      setActive(-1);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +65,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
       return;
     }
     setError(null);
+    setOpen(false);
     const params = new URLSearchParams();
     if (text.trim()) params.set('q', text.trim());
     if (minPrice !== '') params.set('min', minPrice);
@@ -62,17 +95,60 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
       aria-label="Product search"
     >
       <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-end gap-3">
-        <label className="flex flex-col text-xs text-gray-700 flex-1 min-w-[180px]">
-          Search
+        <div className="relative flex flex-col text-xs text-gray-700 flex-1 min-w-[180px]">
+          <label htmlFor={`${listId}-input`}>Search</label>
           <input
+            id={`${listId}-input`}
             type="search"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={suggestions.length > 0}
+            aria-controls={`${listId}-list`}
+            aria-activedescendant={active >= 0 && suggestions[active] ? `${listId}-opt-${active}` : undefined}
+            autoComplete="off"
             value={text}
-            onChange={e => setText(e.target.value)}
+            onChange={e => {
+              setText(e.target.value);
+              setOpen(true);
+              setActive(-1);
+            }}
+            onKeyDown={onSearchKeyDown}
+            onFocus={() => setOpen(true)}
+            onBlur={() => setTimeout(() => setOpen(false), 150)}
             placeholder="Product name, category or seller"
             className={field}
             autoFocus
           />
-        </label>
+          <ul
+            id={`${listId}-list`}
+            role="listbox"
+            aria-label="Search suggestions"
+            className={`absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg ${
+              suggestions.length ? '' : 'hidden'
+            }`}
+          >
+            {suggestions.map((suggestion, index) => (
+              <li
+                key={`${suggestion.kind}-${suggestion.label}`}
+                id={`${listId}-opt-${index}`}
+                role="option"
+                aria-selected={index === active}
+                onMouseDown={e => {
+                  e.preventDefault();
+                  choose(suggestion);
+                }}
+                onMouseEnter={() => setActive(index)}
+                className={`cursor-pointer px-3 py-2 text-sm ${index === active ? 'bg-amber-50' : ''}`}
+              >
+                <span className="block text-gray-900">{suggestion.label}</span>
+                <span className="block text-xs text-gray-600">
+                  {suggestion.kind === 'product' ? 'Product' : suggestion.kind === 'category' ? 'Category' : 'Seller'} ·{' '}
+                  {suggestion.detail}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
         <label className="flex flex-col text-xs text-gray-700 w-24">
           Min price
           <input
