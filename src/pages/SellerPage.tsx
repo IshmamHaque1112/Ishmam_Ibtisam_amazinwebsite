@@ -23,7 +23,7 @@ const RatingBar: React.FC<{ label: string; value: number }> = ({ label, value })
 
 const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, params }) => {
   const db = useDb();
-  const { username } = useStore();
+  const { username, orders } = useStore();
   const seller = db.getSeller(id);
   // Set when a review excerpt elsewhere links here with ?review=<id>, so the
   // matching review can be scrolled to and highlighted once it's rendered.
@@ -60,14 +60,20 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
     products.map(p => [p.id, db.getProductReviews(p.id)])
   );
 
+  // Seller ratings are for verified buyers: accounts with at least one
+  // order from this seller. (Orders are kept in this browser, so the check
+  // happens here too; a shared backend would need to enforce it as well.)
+  const isVerifiedBuyer = orders.some(order => order.lines.some(line => line.sellerId === id));
+
   const saveReview = async (review: { rating: number; title?: string; reviewText?: string }) => {
-    if (!username) throw new Error('Not logged in');
+    if (!username || !isVerifiedBuyer) throw new Error('Only verified buyers can rate a seller');
     await db.addSellerReview({
       sellerId: id,
       username,
       ...review,
       reviewDate: new Date().toISOString().slice(0, 10),
-      helpfulVotes: 0
+      helpfulVotes: 0,
+      verifiedBuyer: true
     });
   };
 
@@ -183,23 +189,27 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
       {/* Reviews */}
       <div className="mt-6 bg-white border rounded-lg p-4">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="font-semibold text-gray-900">Customer reviews ({reviews.length})</h2>
-          {username ? (
+          <h2 className="font-semibold text-gray-900">Seller ratings from buyers ({reviews.length})</h2>
+          {username && isVerifiedBuyer ? (
             <button
               type="button"
               onClick={() => setShowReviewForm(!showReviewForm)}
               className="text-sm text-amazin-blue hover:underline"
               aria-expanded={showReviewForm}
             >
-              {showReviewForm ? 'Cancel' : '+ Write a review'}
+              {showReviewForm ? 'Cancel' : '+ Rate this seller'}
             </button>
-          ) : (
+          ) : !username ? (
             <a href={href.login(href.seller(id))} className="text-sm text-amazin-blue hover:underline">
-              Log in to write a review
+              Log in to rate this seller
             </a>
-          )}
+          ) : null}
         </div>
 
+        <p className="text-xs text-gray-600 -mt-2 mb-3">
+          Rates the seller (shipping, packaging, service), separate from product reviews.
+          {username && !isVerifiedBuyer && ` Only verified buyers can rate a seller: place an order with ${seller.name} first.`}
+        </p>
         {showReviewForm && (
           <ReviewForm
             subject="seller"
@@ -226,6 +236,11 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
                   <div>
                     <Stars rating={review.rating} />
                     <span className="text-sm text-gray-600 ml-2">{review.username}</span>
+                    {review.verifiedBuyer && (
+                      <span className="ml-2 text-xs font-semibold text-green-800 bg-green-50 rounded px-1.5 py-0.5">
+                        Verified buyer
+                      </span>
+                    )}
                   </div>
                   <span className="text-xs text-gray-500">{review.reviewDate}</span>
                 </div>

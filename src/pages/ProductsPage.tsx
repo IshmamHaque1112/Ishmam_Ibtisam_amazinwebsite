@@ -28,7 +28,7 @@ const ProductsPage: React.FC<{ params: URLSearchParams }> = ({ params }) => {
       <p className="text-sm text-gray-600 mb-4">
         {all.length} products · transparent pricing, quality ratings and seller details
       </p>
-      <CatalogControls filters={filters} onChange={update} resultCount={products.length} />
+      <CatalogControls filters={filters} onChange={update} resultCount={products.length} categories={db.getCategories()} />
       {products.length === 0 ? (
         <div className="bg-white border rounded-lg p-8 text-center text-gray-700" data-testid="no-results">
           <p>No products match these filters.</p>
