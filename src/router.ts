@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 // on static hosting like Vercel without any rewrite rules.
 
 export type Route =
+  | { name: 'home' }
   | { name: 'products' }
   | { name: 'product'; id: string; params: URLSearchParams }
   | { name: 'sellers' }
@@ -14,13 +15,15 @@ export type Route =
   | { name: 'notFound' };
 
 export const parseHash = (hash: string): Route => {
-  const raw = hash.replace(/^#/, '') || '/products';
+  const raw = hash.replace(/^#/, '') || '/';
   const [path, query = ''] = raw.split('?');
   const params = new URLSearchParams(query);
   const parts = path.split('/').filter(Boolean).map(decodeURIComponent);
 
   switch (parts[0]) {
     case undefined:
+    case 'home':
+      return { name: 'home' };
     case 'products':
       return { name: 'products' };
     case 'product':
@@ -41,6 +44,7 @@ export const parseHash = (hash: string): Route => {
 };
 
 export const href = {
+  home: () => '#/',
   products: () => '#/products',
   // Passing a reviewId scrolls straight to that review on the product page
   // (used by the review excerpt shown in product rows).

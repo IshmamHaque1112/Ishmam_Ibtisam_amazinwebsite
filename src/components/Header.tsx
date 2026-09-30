@@ -3,6 +3,7 @@ import { useStore } from '../context/store';
 import { href, Route } from '../router';
 import { CartIcon, KeyIcon, SearchIcon } from './Icons';
 import SearchBar from './SearchBar';
+import logoMark from '../assets/logo-mark.png';
 
 interface HeaderProps {
   route: Route;
@@ -33,9 +34,9 @@ const Header: React.FC<HeaderProps> = ({ route }) => {
       <div className="bg-amazin-dark text-white">
         <div className="max-w-7xl mx-auto px-4 py-2 md:h-16 flex flex-wrap md:grid md:grid-cols-[1fr_auto_1fr] items-center justify-between gap-x-2 gap-y-1">
           {/* Left: logo + brand */}
-          <a href={href.products()} className="flex items-center gap-2 justify-self-start" aria-label="Amazin home">
-            <span className="w-9 h-9 rounded-full bg-amazin-orange text-amazin-dark font-bold flex items-center justify-center">
-              a
+          <a href={href.home()} className="flex items-center gap-2 justify-self-start" aria-label="Amazin home">
+            <span className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden">
+              <img src={logoMark} alt="" className="w-[120px] h-[80px] max-w-none object-contain" />
             </span>
             <span className="brand-cursive text-2xl text-white">Amazin</span>
           </a>

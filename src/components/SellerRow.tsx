@@ -26,8 +26,6 @@ const SellerRow: React.FC<SellerRowProps> = ({ seller, productCount = 0, tags = 
     if (!reviews.length) return null;
     
     const averageRating = reviewAverage || seller.overallRating;
-    const threshold = averageRating > 3 ? 3 : averageRating < 3 ? 3 : 3;
-    
     const qualifyingReviews = reviews.filter(r => 
       averageRating > 3 ? r.rating > 3 : r.rating < 3
     );

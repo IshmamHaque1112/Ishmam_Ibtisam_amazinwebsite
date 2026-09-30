@@ -15,7 +15,13 @@ const ProductsPage: React.FC = () => {
       </p>
       <ul className="space-y-2">
         {products.map(product => (
-          <ProductRow key={product.id} product={product} seller={sellers.get(product.sellerId)} />
+          <ProductRow
+            key={product.id}
+            product={product}
+            seller={sellers.get(product.sellerId)}
+            reviews={db.getProductReviews(product.id)}
+            tags={db.getProductTags(product.id)}
+          />
         ))}
       </ul>
     </div>

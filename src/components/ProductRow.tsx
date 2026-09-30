@@ -17,7 +17,7 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
   const rating = calculateProductRating(product, seller);
   
   // Calculate review average for display
-  const reviewAverage = reviews.length > 0 
+  const reviewAverage = reviews.length > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length 
     : null;
 
@@ -27,8 +27,6 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
     if (!reviews.length) return null;
     
     const averageRating = reviewAverage || product.rating;
-    const threshold = averageRating > 3 ? 3 : averageRating < 3 ? 3 : 3;
-    
     const qualifyingReviews = reviews.filter(r => 
       averageRating > 3 ? r.rating > 3 : r.rating < 3
     );
@@ -55,7 +53,7 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
         </a>
         <div className="text-xs text-gray-600 flex flex-wrap gap-x-3 gap-y-1 mt-0.5">
           <span>{product.category}</span>
-          <Stars rating={product.rating} />
+          <Stars rating={reviewAverage ?? product.rating} />
           <span>
             Sold by{' '}
             <a href={href.seller(product.sellerId)} className="text-amazin-blue hover:underline">

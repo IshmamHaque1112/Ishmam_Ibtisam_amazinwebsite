@@ -47,7 +47,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ params }) => {
       ) : (
         <ul className="space-y-2">
           {results.map(product => (
-            <ProductRow key={product.id} product={product} seller={sellers.get(product.sellerId)} />
+            <ProductRow key={product.id} product={product} seller={sellers.get(product.sellerId)} reviews={db.getProductReviews(product.id)} tags={db.getProductTags(product.id)} />
           ))}
         </ul>
       )}

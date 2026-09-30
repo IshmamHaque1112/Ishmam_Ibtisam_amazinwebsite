@@ -176,7 +176,14 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
         </aside>
       </div>
 
-      {priceHistory.length > 0 && <div className="mt-6"><PriceHistoryChart priceHistory={priceHistory} /></div>}
+      <div className="mt-6">
+        <PriceHistoryChart
+          priceHistory={priceHistory}
+          currentPrice={product.currentPrice}
+          allTimeLowPrice={product.allTimeLowPrice}
+          thirtyDayHighPrice={product.thirtyDayHighPrice}
+        />
+      </div>
       {reviews.length > 0 && <div className="mt-6"><RatingGraph reviews={reviews} /></div>}
 
       {/* Tags */}

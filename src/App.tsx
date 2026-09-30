@@ -11,6 +11,7 @@ import SellerPage from './pages/SellerPage';
 import SearchPage from './pages/SearchPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
+import HomePage from './pages/HomePage';
 
 function App() {
   const route = useRoute();
@@ -18,6 +19,8 @@ function App() {
 
   const page = (() => {
     switch (route.name) {
+      case 'home':
+        return <HomePage />;
       case 'products':
         return <ProductsPage />;
       case 'product':
