@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applyCatalogFilters,
+  clearedFilters,
+  getSuggestions,
   isNearAllTimeLow,
   readCatalogFilters,
   writeCatalogFilters
@@ -49,7 +51,48 @@ test('near all-time low means at most 10% above the lowest recorded price', () =
 test('filters round-trip through the URL and ignore unknown values', () => {
   const written = writeCatalogFilters(new URLSearchParams('q=pan'), { sort: 'deal', nearLow: true, priceLock: false, recommended: true });
   assert.equal(written.toString(), 'q=pan&sort=deal&near_low=1&rec=1');
-  assert.deepEqual(readCatalogFilters(written), { sort: 'deal', nearLow: true, priceLock: false, recommended: true });
+  assert.deepEqual(readCatalogFilters(written), {
+    sort: 'deal',
+    nearLow: true,
+    priceLock: false,
+    recommended: true,
+    category: undefined,
+    minPrice: undefined,
+    maxPrice: undefined,
+    minRating: undefined
+  });
   assert.equal(readCatalogFilters(new URLSearchParams('sort=bogus')).sort, 'name');
   assert.equal(writeCatalogFilters(new URLSearchParams('sort=deal'), base).toString(), '');
+});
+
+test('category, price range and rating filters combine', () => {
+  const filters = { ...base, category: 'Groceries', minPrice: 6, maxPrice: 60, minRating: 4 };
+  assert.deepEqual(names(applyCatalogFilters(catalog, filters, sellers)), ['Middle', 'Pricey']);
+  assert.deepEqual(names(applyCatalogFilters(catalog, { ...filters, maxPrice: 30 }, sellers)), ['Middle']);
+  assert.deepEqual(names(applyCatalogFilters(catalog, { ...filters, category: 'Toys' }, sellers)), []);
+  assert.deepEqual(clearedFilters({ ...filters, sort: 'deal' }), { sort: 'deal', nearLow: false, priceLock: false, recommended: false });
+});
+
+test('price and rating filters read from the URL and reject bad values', () => {
+  const read = readCatalogFilters(new URLSearchParams('category=Medicine&min=5&max=abc&rating=9'));
+  assert.equal(read.category, 'Medicine');
+  assert.equal(read.minPrice, 5);
+  assert.equal(read.maxPrice, undefined);
+  assert.equal(read.minRating, undefined);
+  const written = writeCatalogFilters(new URLSearchParams(), { ...base, minPrice: 0, minRating: 3 });
+  assert.equal(written.toString(), 'min=0&rating=3');
+});
+
+test('search suggestions match words in any order and cover products, categories and sellers', () => {
+  const products = [
+    product({ id: 'P1', name: 'Non-Stick Frying Pan', category: 'Kitchenware' }),
+    product({ id: 'P2', name: 'Pancake Mix', category: 'Groceries' }),
+    product({ id: 'P3', name: 'Garden Rake', category: 'Outdoor & Garden' })
+  ];
+  const sellerList = [seller({ id: 'S1', name: 'Pantry Plus' })];
+  const pan = getSuggestions('pan', products, sellerList);
+  assert.deepEqual(pan.map(s => s.label), ['Non-Stick Frying Pan', 'Pancake Mix', 'Pantry Plus']);
+  assert.deepEqual(getSuggestions('pan frying', products, sellerList).map(s => s.label), ['Non-Stick Frying Pan']);
+  assert.deepEqual(getSuggestions('garden', products, sellerList).map(s => s.kind), ['product', 'category']);
+  assert.deepEqual(getSuggestions('   ', products, sellerList), []);
 });
