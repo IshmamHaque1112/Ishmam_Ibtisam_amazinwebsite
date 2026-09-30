@@ -3,7 +3,8 @@ import sellersCsv from '../data/sellers.csv?raw';
 import customersCsv from '../data/customers.csv?raw';
 import sellerBlurbsCsv from '../data/seller_blurbs.csv?raw';
 import { parseCsv } from './csv';
-import { supabase } from '../lib/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabase } from '../lib/supabase';
 import {
   Customer,
   Product,
@@ -123,7 +124,9 @@ const toSellerReview = (r: Row): SellerReview => ({
   title: r.title ? str(r.title) : undefined,
   reviewText: r.review_text ? str(r.review_text) : undefined,
   reviewDate: str(r.review_date).slice(0, 10),
-  helpfulVotes: num(r.helpful_votes)
+  helpfulVotes: num(r.helpful_votes),
+  // Only present if the Supabase table has a verified_buyer column.
+  verifiedBuyer: r.verified_buyer === true ? true : undefined
 });
 
 const toProductTag = (r: Row): ProductTagRow => ({
@@ -161,6 +164,10 @@ const countTags = (rows: { tagName: string }[]): TagWithCount[] => {
 
 const byName = <T extends { name: string }>(a: T, b: T) => a.name.localeCompare(b.name);
 const newestFirst = <T extends { reviewDate: string }>(a: T, b: T) => b.reviewDate.localeCompare(a.reviewDate);
+
+// Set by loadStoreData() once the (lazily loaded) Supabase client is ready.
+// Stays null in CSV mode.
+let supabase: SupabaseClient | null = null;
 
 // ---------- localStorage helpers for CSV mode ----------
 
@@ -340,7 +347,9 @@ export class StoreData {
       review_date: review.reviewDate,
       helpful_votes: review.helpfulVotes
     });
-    const row: SellerReview = saved ? toSellerReview(saved) : { ...review, reviewId: newId('SR') };
+    const row: SellerReview = saved
+      ? { ...toSellerReview(saved), verifiedBuyer: review.verifiedBuyer }
+      : { ...review, reviewId: newId('SR') };
     this.sellerReviews.push(row);
     this.persistLocal();
     this.onChange();
@@ -535,6 +544,7 @@ let storePromise: Promise<StoreData> | null = null;
 export const loadStoreData = (): Promise<StoreData> => {
   if (!storePromise) {
     storePromise = (async () => {
+      supabase = await getSupabase();
       if (supabase) {
         try {
           const store = await loadFromSupabase();
