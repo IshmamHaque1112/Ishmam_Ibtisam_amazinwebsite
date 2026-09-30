@@ -1,5 +1,4 @@
 import initSqlJs, { Database, SqlValue } from 'sql.js';
-import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import productsCsv from '../data/products.csv?raw';
 import sellersCsv from '../data/sellers.csv?raw';
 import customersCsv from '../data/customers.csv?raw';
@@ -293,11 +292,24 @@ let dbPromise: Promise<StoreDatabase> | null = null;
 
 export const loadDatabase = (): Promise<StoreDatabase> => {
   if (!dbPromise) {
-    dbPromise = initSqlJs({ locateFile: () => wasmUrl }).then(SQL => {
-      const db = new SQL.Database();
-      db.run(SCHEMA);
-      seed(db);
-      return new StoreDatabase(db);
+    dbPromise = initSqlJs({
+      locateFile: (file) => {
+        // Use CDN for sql.js WASM file to avoid Vercel build issues
+        return `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`;
+      }
+    }).then(SQL => {
+      try {
+        const db = new SQL.Database();
+        db.run(SCHEMA);
+        seed(db);
+        return new StoreDatabase(db);
+      } catch (error) {
+        console.error('Failed to initialize database:', error);
+        throw error;
+      }
+    }).catch(error => {
+      console.error('Failed to load sql.js:', error);
+      throw error;
     });
   }
   return dbPromise;
