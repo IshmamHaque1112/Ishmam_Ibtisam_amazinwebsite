@@ -66,6 +66,8 @@ export interface SellerReview {
   reviewText?: string;
   reviewDate: string;
   helpfulVotes: number;
+  // True when the reviewer had an order from this seller when they posted.
+  verifiedBuyer?: boolean;
 }
 
 export interface SellerTag {
@@ -124,9 +126,39 @@ export interface CartState {
   saved?: SavedItem[]; // optional so carts saved before this feature still load
 }
 
+// A placed (demo) order. Lines copy the name, seller and price at checkout so
+// the order history stays accurate even if the catalog changes later.
+export interface OrderLine {
+  productId: string;
+  productName: string;
+  category: string;
+  sellerId: string;
+  sellerName: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  priceLocked: boolean;
+}
+
+export interface Order {
+  id: string;
+  placedAt: number;
+  folderName?: string;
+  lines: OrderLine[];
+  itemCount: number;
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  grandTotal: number;
+}
+
 export interface UserSession {
   username: string;
   cart: CartState;
+  orders?: Order[]; // optional so data saved before order history still loads
+  settings?: {
+    autoCategoryFolders?: boolean; // file new cart items into a folder named after their category
+  };
 }
 
 // Ratings
