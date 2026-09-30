@@ -6,6 +6,8 @@ import { calculateDealScore, calculateProductRating, calculateSellerRating } fro
 import { formatMoney } from '../utils/cartPricing';
 import { CategoryIcon, Stars } from '../components/Icons';
 import AddToCart from '../components/AddToCart';
+import RatingGraph from '../components/RatingGraph';
+import PriceHistoryChart from '../components/PriceHistoryChart';
 import NotFoundPage from './NotFoundPage';
 
 const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, params }) => {
@@ -43,6 +45,7 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
   const dealScore = calculateDealScore(product);
   const reviews = db.getProductReviews(id);
   const tags = db.getProductTags(id);
+  const priceHistory = db.getProductPriceHistory(id);
   const more = db
     .searchProducts({ category: product.category })
     .filter(p => p.id !== product.id)
@@ -172,6 +175,9 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
           )}
         </aside>
       </div>
+
+      {priceHistory.length > 0 && <div className="mt-6"><PriceHistoryChart priceHistory={priceHistory} /></div>}
+      {reviews.length > 0 && <div className="mt-6"><RatingGraph reviews={reviews} /></div>}
 
       {/* Tags */}
       <div className="mt-6 bg-white border rounded-lg p-4">
