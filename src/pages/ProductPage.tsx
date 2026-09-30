@@ -48,35 +48,45 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
     .filter(p => p.id !== product.id)
     .slice(0, 4);
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username) return;
     
-    db.addProductReview({
-      productId: id,
-      username,
-      rating: reviewForm.rating,
-      title: reviewForm.title || undefined,
-      reviewText: reviewForm.reviewText || undefined,
-      reviewDate: new Date().toISOString().slice(0, 10),
-      helpfulVotes: 0
-    });
+    try {
+      await db.addProductReview({
+        productId: id,
+        username,
+        rating: reviewForm.rating,
+        title: reviewForm.title || undefined,
+        reviewText: reviewForm.reviewText || undefined,
+        reviewDate: new Date().toISOString().slice(0, 10),
+        helpfulVotes: 0
+      });
+    } catch {
+      alert('Sorry, your review could not be saved. Please try again.');
+      return;
+    }
     
     setShowReviewForm(false);
     setReviewForm({ rating: 5, title: '', reviewText: '' });
     window.location.reload();
   };
 
-  const handleTagSubmit = (e: React.FormEvent) => {
+  const handleTagSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !newTag.trim()) return;
     
-    db.addProductTag({
-      productId: id,
-      tagName: newTag.trim(),
-      addedByUsername: username,
-      dateAdded: new Date().toISOString().slice(0, 10)
-    });
+    try {
+      await db.addProductTag({
+        productId: id,
+        tagName: newTag.trim(),
+        addedByUsername: username,
+        dateAdded: new Date().toISOString().slice(0, 10)
+      });
+    } catch {
+      alert('Sorry, your tag could not be saved. Please try again.');
+      return;
+    }
     
     setNewTag('');
     setShowTagForm(false);
