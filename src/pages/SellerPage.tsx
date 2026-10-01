@@ -5,8 +5,6 @@ import { href, useDocumentTitle } from '../router';
 import { calculateSellerRating } from '../utils/ratingCalculations';
 import { SellerLogo, Stars } from '../components/Icons';
 import ProductRow from '../components/ProductRow';
-import RatingGraph from '../components/RatingGraph';
-import { ReviewForm, TagForm } from '../components/FeedbackForms';
 import NotFoundPage from './NotFoundPage';
 
 const RatingBar: React.FC<{ label: string; value: number }> = ({ label, value }) => (
@@ -34,7 +32,52 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showTagForm, setShowTagForm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [tags, setTags] = useState<any[]>([]);
+  const [reviewAverage, setReviewAverage] = useState<number | null>(null);
+  const [productTags, setProductTags] = useState<Map<string, any[]>>(new Map());
+  const [productReviews, setProductReviews] = useState<Map<string, any[]>>(new Map());
+  const [dataLoading, setDataLoading] = useState(true);
   useDocumentTitle(seller ? seller.name : 'Seller not found');
+
+  // Load async data when seller is available
+  useEffect(() => {
+    const loadData = async () => {
+      if (!seller) return;
+      
+      try {
+        setDataLoading(true);
+        const [reviewsData, tagsData, reviewAvgData] = await Promise.all([
+          db.getSellerReviews(id),
+          db.getSellerTags(id),
+          db.getSellerReviewAverage(id)
+        ]);
+        setReviews(reviewsData);
+        setTags(tagsData);
+        setReviewAverage(reviewAvgData);
+
+        // Load tags and reviews for seller's products
+        const products = db.getProductsBySeller(seller.id);
+        const tagPromises = products.map(p => db.getProductTags(p.id));
+        const reviewPromises = products.map(p => db.getProductReviews(p.id));
+        
+        const tagsResults = await Promise.all(tagPromises);
+        const reviewsResults = await Promise.all(reviewPromises);
+        
+        const tagsMap = new Map(products.map((p, i) => [p.id, tagsResults[i]]));
+        const reviewsMap = new Map(products.map((p, i) => [p.id, reviewsResults[i]]));
+        
+        setProductTags(tagsMap);
+        setProductReviews(reviewsMap);
+      } catch (error) {
+        console.error('Failed to load seller data:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [id, seller, db]);
 
   // A review excerpt in a seller row links here with ?review=<id>; once that
   // review renders below, scroll it into view automatically.
@@ -48,17 +91,6 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
 
   const rating = calculateSellerRating(seller);
   const products = db.getProductsBySeller(seller.id);
-  const reviews = db.getSellerReviews(id);
-  const tags = db.getSellerTags(id);
-  const reviewAverage = db.getSellerReviewAverage(id);
-
-  // Pre-fetch tags and reviews for seller's products
-  const productTags = new Map(
-    products.map(p => [p.id, db.getProductTags(p.id)])
-  );
-  const productReviews = new Map(
-    products.map(p => [p.id, db.getProductReviews(p.id)])
-  );
 
   // Seller ratings are for verified buyers: accounts with at least one
   // order from this seller. (Orders are kept in this browser, so the check
@@ -75,6 +107,9 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
       helpfulVotes: 0,
       verifiedBuyer: true
     });
+    // Reload reviews after adding
+    const reviewsData = await db.getSellerReviews(id);
+    setReviews(reviewsData);
   };
 
   const saveTag = async (tagName: string) => {
@@ -85,6 +120,9 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
       addedByUsername: username,
       dateAdded: new Date().toISOString().slice(0, 10)
     });
+    // Reload tags after adding
+    const tagsData = await db.getSellerTags(id);
+    setTags(tagsData);
   };
 
   return (
@@ -130,8 +168,6 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
         </div>
       </div>
 
-      {reviews.length > 0 && <div className="mt-6"><RatingGraph reviews={reviews} /></div>}
-
       {/* Blurb */}
       {seller.blurb && (
         <div className="mt-6 bg-white border rounded-lg p-4">
@@ -160,20 +196,39 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
           )}
         </div>
         {showTagForm && (
-          <TagForm
-            existing={tags.map(t => t.tagName)}
-            onSubmit={saveTag}
-            onDone={() => {
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const input = e.target.elements.tagInput as HTMLInputElement;
+            if (input.value.trim()) {
+              await saveTag(input.value.trim());
+              input.value = '';
               setShowTagForm(false);
               setNotice('Thanks! Your tag was added.');
-            }}
-          />
+            }
+          }} className="mb-3">
+            <div className="flex gap-2">
+              <input
+                name="tagInput"
+                type="text"
+                placeholder="Enter a tag"
+                className="flex-1 text-sm border rounded px-3 py-1.5"
+              />
+              <button
+                type="submit"
+                className="text-sm bg-amazin-orange text-white px-3 py-1.5 rounded"
+              >
+                Add
+              </button>
+            </div>
+          </form>
         )}
-        {tags.length > 0 ? (
+        {dataLoading ? (
+          <p className="text-sm text-gray-600">Loading tags...</p>
+        ) : tags.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {tags.map(tag => (
+            {tags.map((tag, index) => (
               <span
-                key={tag.tagName}
+                key={index}
                 className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full"
                 title={`${tag.count} customers added this tag`}
               >
@@ -211,20 +266,67 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
           {username && !isVerifiedBuyer && ` Only verified buyers can rate a seller: place an order with ${seller.name} first.`}
         </p>
         {showReviewForm && (
-          <ReviewForm
-            subject="seller"
-            onSubmit={saveReview}
-            onDone={() => {
-              setShowReviewForm(false);
-              setNotice('Thanks! Your review was posted.');
-            }}
-          />
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const rating = Number(e.target.elements.rating.value);
+            const title = (e.target.elements.title as HTMLInputElement).value;
+            const reviewText = (e.target.elements.reviewText as HTMLTextAreaElement).value;
+            
+            await saveReview({ rating, title: title || undefined, reviewText: reviewText || undefined });
+            setShowReviewForm(false);
+            setNotice('Thanks! Your review was posted.');
+          }} className="bg-gray-50 rounded-lg p-4 mb-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Rate this seller</h3>
+            <div className="mb-3">
+              <label className="block text-sm text-gray-700 mb-1">Rating</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    type="button"
+                    name="rating"
+                    value={star}
+                    className="text-2xl text-gray-300 hover:text-amazin-orange"
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm text-gray-700 mb-1">Title (optional)</label>
+              <input
+                name="title"
+                type="text"
+                className="w-full text-sm border rounded px-3 py-1.5"
+                placeholder="Summarize your experience"
+              />
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm text-gray-700 mb-1">Review (optional)</label>
+              <textarea
+                name="reviewText"
+                className="w-full text-sm border rounded px-3 py-1.5"
+                rows={4}
+                placeholder="Share your experience with this seller"
+              />
+            </div>
+            <button
+              type="submit"
+              className="text-sm bg-amazin-orange text-white px-4 py-2 rounded"
+            >
+              Submit rating
+            </button>
+          </form>
         )}
-        {reviews.length > 0 ? (
+
+        {dataLoading ? (
+          <p className="text-sm text-gray-600">Loading reviews...</p>
+        ) : reviews.length > 0 ? (
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {reviews.map(review => (
+            {reviews.map((review, index) => (
               <div
-                key={review.reviewId}
+                key={index}
                 id={`review-${review.reviewId}`}
                 className={`bg-gray-50 rounded-lg p-4 scroll-mt-24 ${
                   review.reviewId === highlightReviewId

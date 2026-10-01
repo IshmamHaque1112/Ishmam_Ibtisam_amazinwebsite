@@ -1,26 +1,26 @@
-customer_id,username,display_name,join_date,account_type,favorite_category,avg_cart_size,has_left_seller_ratings
-C001,ava.nguyen,Ava Nguyen,2021-08-08,Regular,Appliances,4,No
-C002,liam.smith,Liam Smith,2022-04-01,Regular,Electronics,11,Yes
-C003,noah.garcia,Noah Garcia,2023-02-25,Occasional,Tabletop Games,5,No
-C004,emma.patel,Emma Patel,2026-09-11,Occasional,Appliances,1,Yes
-C005,olivia.kim,Olivia Kim,2025-05-02,Regular,Medicine,2,No
-C006,ethan.johnson,Ethan Johnson,2024-10-17,Regular,Tabletop Games,2,No
-C007,sophia.martinez,Sophia Martinez,2023-01-23,Occasional,Kitchenware,7,Yes
-C008,mason.lee,Mason Lee,2026-12-24,Occasional,Auto Parts,12,Yes
-C009,isabella.brown,Isabella Brown,2021-11-11,Regular,Appliances,10,No
-C010,lucas.davis,Lucas Davis,2025-05-22,Regular,Electronics,7,No
-C011,mia.chowdhury,Mia Chowdhury,2025-03-07,Occasional,Electronics,7,No
-C012,james.rossi,James Rossi,2025-05-13,Regular,Home Decor,9,Yes
-C013,amelia.khan,Amelia Khan,2022-07-26,Regular,Electronics,10,No
-C014,benjamin.anderson,Benjamin Anderson,2024-11-07,Occasional,Outdoor & Garden,9,No
-C015,harper.wright,Harper Wright,2023-09-22,Regular,School Supplies,11,No
-C016,elijah.torres,Elijah Torres,2026-05-08,Regular,Kitchenware,4,Yes
-C017,evelyn.hassan,Evelyn Hassan,2022-08-20,Regular,Groceries,2,No
-C018,logan.clark,Logan Clark,2022-12-23,Occasional,Home Decor,7,No
-C019,abigail.rivera,Abigail Rivera,2022-11-23,Occasional,Kitchenware,1,Yes
-C020,alexander.walker,Alexander Walker,2022-12-17,Occasional,Kitchenware,8,Yes
-C021,ella.mitchell,Ella Mitchell,2021-08-05,Occasional,Kitchenware,8,No
-C022,daniel.cohen,Daniel Cohen,2026-09-14,Occasional,Home Decor,9,No
-C023,scarlett.suzuki,Scarlett Suzuki,2024-05-25,Regular,Outdoor & Garden,4,No
-C024,matthew.alvarez,Matthew Alvarez,2026-04-09,Occasional,Outdoor & Garden,8,Yes
-C025,grace.bennett,Grace Bennett,2023-06-11,Regular,Kitchenware,9,Yes
+customer_id,username,display_name,join_date,account_type,favorite_category,avg_cart_size,has_left_seller_ratings,password
+C001,ava.nguyen,Ava Nguyen,2021-08-08,Regular,Appliances,4,No,A7xK9@mPq3L
+C002,liam.smith,Liam Smith,2022-04-01,Regular,Electronics,11,Yes,X5vN2&hR8zT
+C003,noah.garcia,Noah Garcia,2023-02-25,Occasional,Tabletop Games,5,No,Q9jW4*eD6sY
+C004,emma.patel,Emma Patel,2026-09-11,Occasional,Appliances,1,Yes,B3mT7!kG2fP
+C005,olivia.kim,Olivia Kim,2025-05-02,Regular,Medicine,2,No,H6nR1#lV8cX
+C006,ethan.johnson,Ethan Johnson,2024-10-17,Regular,Tabletop Games,2,No,Y4pZ9@jW5bK
+C007,sophia.martinez,Sophia Martinez,2023-01-23,Occasional,Kitchenware,7,Yes,K2sF8*mN4dR
+C008,mason.lee,Mason Lee,2026-12-24,Occasional,Auto Parts,12,Yes,V7gC3$tL6hM
+C009,isabella.brown,Isabella Brown,2021-11-11,Regular,Appliances,10,No,R5jD9^pQ2fS
+C010,lucas.davis,Lucas Davis,2025-05-22,Regular,Electronics,7,No,T8kB4&wZ3vN
+C011,mia.chowdhury,Mia Chowdhury,2025-03-07,Occasional,Electronics,7,No,L3mX7#rH5gP
+C012,james.rossi,James Rossi,2025-05-13,Regular,Home Decor,9,Yes,F6nV2!sK9cB
+C013,amelia.khan,Amelia Khan,2022-07-26,Regular,Electronics,10,No,G9qT4@jD7xL
+C014,benjamin.anderson,Benjamin Anderson,2024-11-07,Occasional,Outdoor & Garden,9,No,P2zR6&mH8bY
+C015,harper.wright,Harper Wright,2023-09-22,Regular,School Supplies,11,No,X5sF3!nK9vD
+C016,elijah.torres,Elijah Torres,2026-05-08,Regular,Kitchenware,4,Yes,W8gC7^lM4pT
+C017,evelyn.hassan,Evelyn Hassan,2022-08-20,Regular,Groceries,2,No,Q4jB9@rZ6sY
+C018,logan.clark,Logan Clark,2022-12-23,Occasional,Home Decor,7,No,V3nK5&tG8cL
+C019,abigail.rivera,Abigail Rivera,2022-11-23,Occasional,Kitchenware,1,Yes,B7hT2!qX5fP
+C020,alexander.walker,Alexander Walker,2022-12-17,Occasional,Kitchenware,8,Yes,H6mF4#wV9sR
+C021,ella.mitchell,Ella Mitchell,2021-08-05,Occasional,Kitchenware,8,No,Y9pG8@kL3bT
+C022,daniel.cohen,Daniel Cohen,2026-09-14,Occasional,Home Decor,9,No,K2sR5&mC7vN
+C023,scarlett.suzuki,Scarlett Suzuki,2024-05-25,Regular,Outdoor & Garden,4,No,X5gD2!hZ9fB
+C024,matthew.alvarez,Matthew Alvarez,2026-04-09,Occasional,Outdoor & Garden,8,Yes,P4nF8^qT6sL
+C025,grace.bennett,Grace Bennett,2023-06-11,Regular,Kitchenware,9,Yes,Q8jV3@rM5bK

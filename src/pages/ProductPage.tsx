@@ -6,33 +6,51 @@ import { calculateDealScore, calculateProductRating, calculateSellerRating } fro
 import { formatMoney } from '../utils/cartPricing';
 import { CategoryIcon, Stars } from '../components/Icons';
 import AddToCart from '../components/AddToCart';
-import RatingGraph from '../components/RatingGraph';
-import PriceHistoryChart from '../components/PriceHistoryChart';
-import { ReviewForm, TagForm } from '../components/FeedbackForms';
 import NotFoundPage from './NotFoundPage';
 
 const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, params }) => {
   const db = useDb();
   const { username } = useStore();
   const product = db.getProduct(id);
-  // Set when a review excerpt elsewhere links here with ?review=<id>, so the
-  // matching review can be scrolled to and highlighted once it's rendered.
   const highlightReviewId = params?.get('review') ?? null;
 
-  // Hooks must run unconditionally on every render, so these are declared
-  // before the early "not found" return below rather than after it.
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showTagForm, setShowTagForm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [tags, setTags] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   useDocumentTitle(product ? product.name : 'Product not found');
 
-  // A review excerpt in a product/seller row links here with ?review=<id>;
-  // once that review renders below, scroll it into view automatically.
+  // Load async data when product is available
+  useEffect(() => {
+    const loadData = async () => {
+      if (!product) return;
+      
+      try {
+        setDataLoading(true);
+        const [reviewsData, tagsData] = await Promise.all([
+          db.getProductReviews(id),
+          db.getProductTags(id)
+        ]);
+        setReviews(reviewsData);
+        setTags(tagsData);
+      } catch (error) {
+        console.error('Failed to load product data:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [id, product, db]);
+
+  // Scroll to highlighted review
   useEffect(() => {
     if (!highlightReviewId) return;
     const el = document.getElementById(`review-${highlightReviewId}`);
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [highlightReviewId, id]);
+  }, [highlightReviewId]);
 
   if (!product) return <NotFoundPage message="That product doesn't exist." />;
 
@@ -40,9 +58,6 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
   const rating = calculateProductRating(product, seller);
   const sellerRating = seller ? calculateSellerRating(seller) : undefined;
   const dealScore = calculateDealScore(product);
-  const reviews = db.getProductReviews(id);
-  const tags = db.getProductTags(id);
-  const priceHistory = db.getProductPriceHistory(id);
   const more = db
     .searchProducts({ category: product.category })
     .filter(p => p.id !== product.id)
@@ -57,6 +72,9 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
       reviewDate: new Date().toISOString().slice(0, 10),
       helpfulVotes: 0
     });
+    // Reload reviews after adding
+    const reviewsData = await db.getProductReviews(id);
+    setReviews(reviewsData);
   };
 
   const saveTag = async (tagName: string) => {
@@ -67,6 +85,9 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
       addedByUsername: username,
       dateAdded: new Date().toISOString().slice(0, 10)
     });
+    // Reload tags after adding
+    const tagsData = await db.getProductTags(id);
+    setTags(tagsData);
   };
 
   return (
@@ -158,16 +179,6 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
         </aside>
       </div>
 
-      <div className="mt-6">
-        <PriceHistoryChart
-          priceHistory={priceHistory}
-          currentPrice={product.currentPrice}
-          allTimeLowPrice={product.allTimeLowPrice}
-          thirtyDayHighPrice={product.thirtyDayHighPrice}
-        />
-      </div>
-      {reviews.length > 0 && <div className="mt-6"><RatingGraph reviews={reviews} /></div>}
-
       {/* Tags */}
       <div className="mt-6 bg-white border rounded-lg p-4">
         <div className="flex justify-between items-center mb-3">
@@ -188,20 +199,39 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
           )}
         </div>
         {showTagForm && (
-          <TagForm
-            existing={tags.map(t => t.tagName)}
-            onSubmit={saveTag}
-            onDone={() => {
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const input = e.target.elements.tagInput as HTMLInputElement;
+            if (input.value.trim()) {
+              await saveTag(input.value.trim());
+              input.value = '';
               setShowTagForm(false);
               setNotice('Thanks! Your tag was added.');
-            }}
-          />
+            }
+          }} className="mb-3">
+            <div className="flex gap-2">
+              <input
+                name="tagInput"
+                type="text"
+                placeholder="Enter a tag"
+                className="flex-1 text-sm border rounded px-3 py-1.5"
+              />
+              <button
+                type="submit"
+                className="text-sm bg-amazin-orange text-white px-3 py-1.5 rounded"
+              >
+                Add
+              </button>
+            </div>
+          </form>
         )}
-        {tags.length > 0 ? (
+        {dataLoading ? (
+          <p className="text-sm text-gray-600">Loading tags...</p>
+        ) : tags.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            {tags.map(tag => (
+            {tags.map((tag, index) => (
               <span
-                key={tag.tagName}
+                key={index}
                 className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full"
                 title={`${tag.count} customers added this tag`}
               >
@@ -235,20 +265,67 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
         </div>
 
         {showReviewForm && (
-          <ReviewForm
-            subject="product"
-            onSubmit={saveReview}
-            onDone={() => {
-              setShowReviewForm(false);
-              setNotice('Thanks! Your review was posted.');
-            }}
-          />
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const rating = Number(e.target.elements.rating.value);
+            const title = (e.target.elements.title as HTMLInputElement).value;
+            const reviewText = (e.target.elements.reviewText as HTMLTextAreaElement).value;
+            
+            await saveReview({ rating, title: title || undefined, reviewText: reviewText || undefined });
+            setShowReviewForm(false);
+            setNotice('Thanks! Your review was posted.');
+          }} className="bg-gray-50 rounded-lg p-4 mb-4">
+            <h3 className="font-semibold text-gray-900 mb-3">Write a review</h3>
+            <div className="mb-3">
+              <label className="block text-sm text-gray-700 mb-1">Rating</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    type="button"
+                    name="rating"
+                    value={star}
+                    className="text-2xl text-gray-300 hover:text-amazin-orange"
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm text-gray-700 mb-1">Title (optional)</label>
+              <input
+                name="title"
+                type="text"
+                className="w-full text-sm border rounded px-3 py-1.5"
+                placeholder="Summarize your review"
+              />
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm text-gray-700 mb-1">Review (optional)</label>
+              <textarea
+                name="reviewText"
+                className="w-full text-sm border rounded px-3 py-1.5"
+                rows={4}
+                placeholder="Share your experience with this product"
+              />
+            </div>
+            <button
+              type="submit"
+              className="text-sm bg-amazin-orange text-white px-4 py-2 rounded"
+            >
+              Submit review
+            </button>
+          </form>
         )}
-        {reviews.length > 0 ? (
+
+        {dataLoading ? (
+          <p className="text-sm text-gray-600">Loading reviews...</p>
+        ) : reviews.length > 0 ? (
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {reviews.map(review => (
+            {reviews.map((review, index) => (
               <div
-                key={review.reviewId}
+                key={index}
                 id={`review-${review.reviewId}`}
                 className={`bg-white border rounded-lg p-4 scroll-mt-24 ${
                   review.reviewId === highlightReviewId
