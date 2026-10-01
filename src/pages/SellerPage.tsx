@@ -5,6 +5,7 @@ import { href, useDocumentTitle } from '../router';
 import { calculateSellerRating } from '../utils/ratingCalculations';
 import { SellerLogo, Stars } from '../components/Icons';
 import ProductRow from '../components/ProductRow';
+import RatingGraph from '../components/RatingGraph';
 import NotFoundPage from './NotFoundPage';
 
 const RatingBar: React.FC<{ label: string; value: number }> = ({ label, value }) => (
@@ -167,6 +168,8 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
           <RatingBar label="Overall" value={seller.overallRating} />
         </div>
       </div>
+
+      {!dataLoading && reviews.length > 0 && <div className="mt-6"><RatingGraph reviews={reviews} /></div>}
 
       {/* Blurb */}
       {seller.blurb && (

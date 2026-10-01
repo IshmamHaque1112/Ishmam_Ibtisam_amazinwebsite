@@ -6,6 +6,8 @@ import { calculateDealScore, calculateProductRating, calculateSellerRating } fro
 import { formatMoney } from '../utils/cartPricing';
 import { CategoryIcon, Stars } from '../components/Icons';
 import AddToCart from '../components/AddToCart';
+import RatingGraph from '../components/RatingGraph';
+import PriceHistoryChart from '../components/PriceHistoryChart';
 import NotFoundPage from './NotFoundPage';
 
 const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, params }) => {
@@ -19,6 +21,7 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
   const [notice, setNotice] = useState<string | null>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   useDocumentTitle(product ? product.name : 'Product not found');
 
@@ -29,12 +32,14 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
       
       try {
         setDataLoading(true);
-        const [reviewsData, tagsData] = await Promise.all([
+        const [reviewsData, tagsData, priceHistoryData] = await Promise.all([
           db.getProductReviews(id),
-          db.getProductTags(id)
+          db.getProductTags(id),
+          db.getProductPriceHistory(id)
         ]);
         setReviews(reviewsData);
         setTags(tagsData);
+        setPriceHistory(priceHistoryData);
       } catch (error) {
         console.error('Failed to load product data:', error);
       } finally {
@@ -178,6 +183,20 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
           )}
         </aside>
       </div>
+
+      {!dataLoading && (
+        <>
+          <div className="mt-6">
+            <PriceHistoryChart
+              priceHistory={priceHistory}
+              currentPrice={product.currentPrice}
+              allTimeLowPrice={product.allTimeLowPrice}
+              thirtyDayHighPrice={product.thirtyDayHighPrice}
+            />
+          </div>
+          {reviews.length > 0 && <div className="mt-6"><RatingGraph reviews={reviews} /></div>}
+        </>
+      )}
 
       {/* Tags */}
       <div className="mt-6 bg-white border rounded-lg p-4">
