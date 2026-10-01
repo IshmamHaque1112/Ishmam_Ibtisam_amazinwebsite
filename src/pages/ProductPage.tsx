@@ -9,6 +9,7 @@ import AddToCart from '../components/AddToCart';
 import RatingGraph from '../components/RatingGraph';
 import PriceHistoryChart from '../components/PriceHistoryChart';
 import NotFoundPage from './NotFoundPage';
+import { ReviewForm, TagForm } from '../components/FeedbackForms';
 
 const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, params }) => {
   const db = useDb();
@@ -218,31 +219,14 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
           )}
         </div>
         {showTagForm && (
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            const input = e.target.elements.tagInput as HTMLInputElement;
-            if (input.value.trim()) {
-              await saveTag(input.value.trim());
-              input.value = '';
+          <TagForm
+            existing={tags.map(t => t.tagName)}
+            onSubmit={saveTag}
+            onDone={() => {
               setShowTagForm(false);
               setNotice('Thanks! Your tag was added.');
-            }
-          }} className="mb-3">
-            <div className="flex gap-2">
-              <input
-                name="tagInput"
-                type="text"
-                placeholder="Enter a tag"
-                className="flex-1 text-sm border rounded px-3 py-1.5"
-              />
-              <button
-                type="submit"
-                className="text-sm bg-amazin-orange text-white px-3 py-1.5 rounded"
-              >
-                Add
-              </button>
-            </div>
-          </form>
+            }}
+          />
         )}
         {dataLoading ? (
           <p className="text-sm text-gray-600">Loading tags...</p>
@@ -284,58 +268,14 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
         </div>
 
         {showReviewForm && (
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            const rating = Number(e.target.elements.rating.value);
-            const title = (e.target.elements.title as HTMLInputElement).value;
-            const reviewText = (e.target.elements.reviewText as HTMLTextAreaElement).value;
-            
-            await saveReview({ rating, title: title || undefined, reviewText: reviewText || undefined });
-            setShowReviewForm(false);
-            setNotice('Thanks! Your review was posted.');
-          }} className="bg-gray-50 rounded-lg p-4 mb-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Write a review</h3>
-            <div className="mb-3">
-              <label className="block text-sm text-gray-700 mb-1">Rating</label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    type="button"
-                    name="rating"
-                    value={star}
-                    className="text-2xl text-gray-300 hover:text-amazin-orange"
-                  >
-                    ★
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm text-gray-700 mb-1">Title (optional)</label>
-              <input
-                name="title"
-                type="text"
-                className="w-full text-sm border rounded px-3 py-1.5"
-                placeholder="Summarize your review"
-              />
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm text-gray-700 mb-1">Review (optional)</label>
-              <textarea
-                name="reviewText"
-                className="w-full text-sm border rounded px-3 py-1.5"
-                rows={4}
-                placeholder="Share your experience with this product"
-              />
-            </div>
-            <button
-              type="submit"
-              className="text-sm bg-amazin-orange text-white px-4 py-2 rounded"
-            >
-              Submit review
-            </button>
-          </form>
+          <ReviewForm
+            subject="product"
+            onSubmit={saveReview}
+            onDone={() => {
+              setShowReviewForm(false);
+              setNotice('Thanks! Your review was posted.');
+            }}
+          />
         )}
 
         {dataLoading ? (

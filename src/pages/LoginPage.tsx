@@ -103,7 +103,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
     setPassword('');
   };
 
-  const input = 'w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-amazin-orange focus:border-transparent';
+  const input = 'w-full min-h-11 px-3 py-2 border border-gray-500 rounded';
   const normalized = normalizeUsername(username);
   const validUsername = USERNAME_PATTERN.test(normalized);
   const showUsernameHint = mode === 'register' && username.trim() !== '' && !validUsername;
