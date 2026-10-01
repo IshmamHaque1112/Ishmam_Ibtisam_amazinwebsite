@@ -2,7 +2,7 @@
 
 The site works in two modes:
 
-- **Supabase mode:** used when `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set and the `products` and `sellers` tables have rows. Reviews, tags and new accounts are saved to Supabase.
+- **Supabase mode:** used when `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are set and the `products` and `sellers` tables have rows. Reviews, tags and new accounts are saved to Supabase.
 - **CSV mode (fallback):** used when those variables are missing or Supabase can't be reached. The catalog comes from `src/data/*.csv`, and reviews, tags and new accounts are saved in the browser. The site never shows a blank page because of a backend problem.
 
 The browser console says which mode is running: `Amazin data source: Supabase` or `Amazin data source: bundled CSV files`.
@@ -26,10 +26,10 @@ It also turns on Row Level Security, so visitors can read the catalog and add re
 
 Vite builds these values into the site at build time, so they have to be set in Vercel. A `.env.local` file only works on your own computer.
 
-1. In Supabase, go to **Project Settings → API** and copy the **Project URL** and the **anon public** key.
+1. In Supabase, go to **Project Settings → API Keys** and copy the **Project URL** and a **Publishable key** (`sb_publishable_...`). Do not use a Secret key (`sb_secret_...`) in this browser app.
 2. In Vercel, open the project and go to **Settings → Environment Variables**. Add:
    - `VITE_SUPABASE_URL` = the Project URL
-   - `VITE_SUPABASE_ANON_KEY` = the anon public key
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` = the publishable key
 
    Tick **Production** and **Preview**.
 3. **Redeploy** (Deployments → ⋯ → Redeploy). Variables only take effect on a new build.

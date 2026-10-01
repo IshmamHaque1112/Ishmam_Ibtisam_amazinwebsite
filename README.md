@@ -35,7 +35,7 @@ A functional, Amazon-style digital marketplace that puts price history, seller d
 
 The site runs in one of two modes (see `SUPABASE_SETUP.md`):
 
-- **Supabase mode:** when `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set at build time. The Supabase client is loaded only in this mode.
+- **Supabase mode:** when `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are set at build time. Use a Supabase publishable key (`sb_publishable_...`) in the browser, never a secret key. The Supabase client is loaded only in this mode.
 - **CSV mode (fallback):** the catalog comes from the files in `src/data/`, and new accounts, reviews and tags are saved in the browser.
 
 | File | Contents | Rows |

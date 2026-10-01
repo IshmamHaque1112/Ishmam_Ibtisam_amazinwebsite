@@ -19,7 +19,7 @@ import {
 // The store keeps the whole catalog in memory and answers page queries
 // synchronously (pages call db.getProducts() etc. directly while rendering).
 // Data is loaded once at startup:
-//   1. from Supabase, when VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are set
+//   1. from Supabase, when VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY are set
 //      and the products + sellers tables have rows;
 //   2. otherwise from the CSV files bundled with the app, so the site never
 //      goes blank because of a backend problem.
