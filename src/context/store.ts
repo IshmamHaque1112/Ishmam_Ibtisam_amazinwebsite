@@ -33,7 +33,9 @@ interface StoreState {
   // Set when the browser refused to save (storage full or blocked).
   storageError: boolean;
 
-  // Session (prototype: username only, no passwords)
+  // Session. Password verification happens before this is called (see
+  // LoginPage) - by the time login() runs, the password has already been
+  // checked via db.verifyPassword(). This only sets the local session state.
   login: (username: string) => Promise<void>;
   logout: () => Promise<void>;
 
@@ -90,9 +92,8 @@ export const useStore = create<StoreState>((set, get) => ({
   ...loadCart(initialUsername),
   storageError: false,
 
-  // The prototype signs in by username only. The old password box accepted
-  // any password (it tried Supabase Auth with a made-up email and fell back to
-  // logging in anyway), so it was removed rather than left as a fake check.
+  // By the time this runs, LoginPage has already called db.verifyPassword()
+  // and only calls this on success. This just records the session locally.
   login: async (username: string) => {
     setCurrentUsername(username);
     set({ username, ...loadCart(username) });

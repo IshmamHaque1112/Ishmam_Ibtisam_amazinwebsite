@@ -44,6 +44,7 @@ const AccountPage: React.FC = () => {
           <button
             type="button"
             onClick={async () => {
+              await db.signOut();
               await logout();
               navigate(href.products());
             }}

@@ -31,5 +31,10 @@ dist-ssr
 # Vercel
 .vercel
 
+# Demo account passwords for scripts/seed-auth-users.mjs - placeholder values,
+# not real secrets, but a "username,password" CSV shouldn't sit in a public
+# repo regardless. Keep your local copy; it's also provided outside the repo.
+scripts/customer-auth-seed.csv
+
 # Unit test build output
 .test-build

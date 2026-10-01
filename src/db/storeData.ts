@@ -4,7 +4,8 @@ import customersCsv from '../data/customers.csv?raw';
 import sellerBlurbsCsv from '../data/seller_blurbs.csv?raw';
 import { parseCsv } from './csv';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getSupabase } from '../lib/supabase';
+import { getSupabase, authSignUp, authSignIn, authSignOut } from '../lib/supabase';
+import { setLocalPassword, verifyLocalPassword, hasLocalPassword } from '../utils/localAuth';
 import {
   Customer,
   Product,
@@ -55,6 +56,16 @@ export type NewSellerTag = SellerTagRow;
 // Usernames: 3-30 characters, letters, numbers, dots, dashes or underscores.
 export const USERNAME_PATTERN = /^[a-z0-9._-]{3,30}$/;
 export const normalizeUsername = (username: string) => username.trim().toLowerCase();
+
+// Passwords: 10-15 characters. No character-class requirement beyond length.
+export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MAX_LENGTH = 15;
+export const validatePassword = (password: string): string | null => {
+  if (password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) {
+    return `Password must be ${PASSWORD_MIN_LENGTH}-${PASSWORD_MAX_LENGTH} characters.`;
+  }
+  return null;
+};
 
 type Row = Record<string, unknown>;
 
@@ -396,14 +407,26 @@ export class StoreData {
     return customer;
   }
 
-  async registerCustomer(username: string, displayName: string): Promise<{ customer?: Customer; error?: string }> {
+  async registerCustomer(username: string, displayName: string, password: string): Promise<{ customer?: Customer; error?: string }> {
     const name = normalizeUsername(username);
     const display = displayName.trim().slice(0, 60);
     if (!USERNAME_PATTERN.test(name)) {
       return { error: 'Usernames must be 3-30 characters: letters, numbers, dots, dashes or underscores.' };
     }
     if (!display) return { error: 'Please enter a display name.' };
+    const passwordError = validatePassword(password);
+    if (passwordError) return { error: passwordError };
     if (await this.findCustomer(name)) return { error: 'That username is already taken.' };
+
+    // Create the password first. If this is Supabase and it fails (for
+    // example the synthetic email is somehow already in use), nothing else
+    // has been written yet.
+    if (this.source === 'supabase' && supabase) {
+      const auth = await authSignUp(name, password);
+      if (!auth.ok) return { error: auth.error ?? 'Could not set a password for this account.' };
+    } else {
+      await setLocalPassword(name, password);
+    }
 
     const customer: Customer = {
       id: newId('C'),
@@ -435,6 +458,44 @@ export class StoreData {
     this.customers.push(customer);
     this.persistLocal();
     return { customer };
+  }
+
+  // True when this username exists as a customer but has never had a
+  // password set in this data source - only meaningful in CSV/local mode,
+  // where "no password yet" can safely be resolved by setting one right in
+  // the browser (there's no other party's account to protect). In Supabase
+  // mode this is always false; a missing Auth user there just looks like an
+  // incorrect password, which is the correct, safe behavior.
+  needsPasswordSetup(username: string): boolean {
+    if (this.source === 'supabase') return false;
+    return !hasLocalPassword(normalizeUsername(username));
+  }
+
+  async setPassword(username: string, password: string): Promise<{ ok: boolean; error?: string }> {
+    const passwordError = validatePassword(password);
+    if (passwordError) return { ok: false, error: passwordError };
+    const name = normalizeUsername(username);
+    if (this.source === 'supabase' && supabase) {
+      const auth = await authSignUp(name, password);
+      if (!auth.ok) return { ok: false, error: auth.error };
+      return { ok: true };
+    }
+    await setLocalPassword(name, password);
+    return { ok: true };
+  }
+
+  async verifyPassword(username: string, password: string): Promise<{ ok: boolean; error?: string }> {
+    const name = normalizeUsername(username);
+    if (this.source === 'supabase') {
+      const auth = await authSignIn(name, password);
+      return auth.ok ? { ok: true } : { ok: false, error: auth.error };
+    }
+    const ok = await verifyLocalPassword(name, password);
+    return ok ? { ok: true } : { ok: false, error: 'Incorrect password.' };
+  }
+
+  async signOut(): Promise<void> {
+    if (this.source === 'supabase') await authSignOut();
   }
 
   // Inserts into Supabase and returns the saved row (with its generated id),
