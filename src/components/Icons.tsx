@@ -72,22 +72,9 @@ export const CartIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
   </svg>
 );
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  Groceries: '🛒',
-  'School Supplies': '✏️',
-  Medicine: '💊',
-  Kitchenware: '🍳',
-  Appliances: '🔌',
-  'Outdoor & Garden': '🌿',
-  'Tabletop Games': '🎲',
-  Electronics: '🎧',
-  'Home Decor': '🛋️',
-  'Auto Parts': '🚗'
-};
-
 // Real stock photos for 9 of the 10 catalog categories. "Home Decor" has no
 // matching photo yet (the provided set had no home-decor-specific image) and
-// falls back to its emoji tile below. "Appliances" reuses the Home & Kitchen
+// falls back to an initials tile below. "Appliances" reuses the Home & Kitchen
 // photo since it's the closest conceptual match and no distinct art exists
 // for it.
 const CATEGORY_IMAGE: Record<string, string> = {
@@ -103,26 +90,36 @@ const CATEGORY_IMAGE: Record<string, string> = {
 };
 
 // The datasets have no per-product photos, so each product shows art for its
-// category instead (falling back to an emoji tile where no photo exists yet).
+// category instead, falling back to an initials tile (never an emoji) where no
+// photo exists yet. The art is decorative: the product name and category are
+// always written right next to it, so screen readers skip the image
+// (WCAG 1.1.1) instead of announcing the category twice.
+const initials = (category: string) =>
+  category
+    .split(/[\s&]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(word => word[0].toUpperCase())
+    .join('');
+
 export const CategoryIcon: React.FC<{ category: string; className?: string }> = ({
   category,
-  className = 'w-12 h-12 text-2xl'
+  className = 'w-12 h-12'
 }) => {
   const image = CATEGORY_IMAGE[category];
   if (image) {
     return (
-      <div className={`${className} rounded overflow-hidden flex-shrink-0`} role="img" aria-label={category}>
-        <img src={image} alt={category} className="w-full h-full object-cover" />
+      <div className={`${className} rounded overflow-hidden flex-shrink-0`} aria-hidden="true">
+        <img src={image} alt="" className="w-full h-full object-cover" />
       </div>
     );
   }
   return (
     <div
-      className={`${className} bg-gray-100 rounded flex items-center justify-center flex-shrink-0`}
-      role="img"
-      aria-label={category}
+      className={`${className} bg-blue-50 text-blue-800 text-sm font-semibold rounded flex items-center justify-center flex-shrink-0`}
+      aria-hidden="true"
     >
-      {CATEGORY_EMOJI[category] ?? '📦'}
+      {initials(category) || '?'}
     </div>
   );
 };
@@ -185,15 +182,16 @@ export const Stars: React.FC<{ rating: number; interactive?: false }> = ({ ratin
   const label = RATING_LABELS[roundedRating] || '';
   
   return (
-    <span 
-      className="text-amazin-orange" 
-      aria-label={`${rating.toFixed(1)} out of 5 stars${label ? `: ${label}` : ''}`}
-      title={label}
-    >
-      {'★'.repeat(roundedRating)}
-      <span className="text-gray-300">{'★'.repeat(5 - roundedRating)}</span>
-      <span className="text-gray-600 text-xs ml-1">{rating.toFixed(1)}</span>
-      {label && <span className="text-gray-500 text-xs ml-1">({label})</span>}
+    // aria-label on a plain <span> is ignored by some screen readers, so the
+    // visible stars are hidden and one sentence is given as real text instead.
+    <span className="text-amazin-orange" title={label}>
+      <span aria-hidden="true">
+        {'★'.repeat(roundedRating)}
+        <span className="text-gray-300">{'★'.repeat(5 - roundedRating)}</span>
+        <span className="text-gray-600 text-xs ml-1">{rating.toFixed(1)}</span>
+        {label && <span className="text-gray-600 text-xs ml-1">({label})</span>}
+      </span>
+      <span className="sr-only">{`Rated ${rating.toFixed(1)} out of 5${label ? `, ${label}` : ''}`}</span>
     </span>
   );
 };

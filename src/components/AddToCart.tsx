@@ -29,8 +29,8 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
     return (
       <a
         href={href.login(window.location.hash)}
-        className={`inline-block text-center border border-amber-600 text-amazin-dark hover:bg-amazin-yellow/30 rounded whitespace-nowrap ${
-          compact ? 'text-xs px-2 py-1' : 'text-sm px-4 py-2'
+        className={`inline-flex min-h-11 items-center justify-center text-center border border-amber-600 text-amazin-dark hover:bg-amazin-yellow/30 rounded whitespace-nowrap ${
+          compact ? 'text-sm px-3' : 'text-sm px-4 py-2'
         }`}
       >
         Log in to add to cart
@@ -59,7 +59,7 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
             <select
               value={folderId}
               onChange={e => setFolderId(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm"
+              className="mt-1 w-full min-h-11 border border-gray-500 rounded px-2 py-1 text-sm"
             >
               <option value="">No folder</option>
               {cartFolders.map(folder => (
@@ -81,13 +81,13 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
               placeholder="New folder name"
               aria-label="New cart folder name"
               maxLength={40}
-              className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
+              className="flex-1 min-h-11 border border-gray-500 rounded px-2 py-1 text-sm"
             />
             <button
               type="button"
               onClick={handleCreateFolder}
               disabled={!newFolderName.trim()}
-              className="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded disabled:opacity-50"
+              className="min-h-11 text-sm bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 rounded disabled:text-gray-600"
             >
               Create
             </button>
@@ -98,7 +98,7 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
         type="button"
         onClick={handleAdd}
         className={`bg-amazin-orange hover:bg-amazin-yellow text-gray-900 font-semibold rounded transition-colors whitespace-nowrap ${
-          compact ? 'text-xs px-3 py-1.5' : 'w-full text-sm px-4 py-2'
+          compact ? 'min-h-11 text-sm px-4' : 'w-full min-h-11 text-sm px-4 py-2'
         }`}
         aria-label={`Add ${product.name} to cart`}
       >

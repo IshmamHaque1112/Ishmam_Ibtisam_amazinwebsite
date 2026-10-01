@@ -16,7 +16,7 @@ interface CatalogControlsProps {
   categories: string[];
 }
 
-const field = 'border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white';
+const field = 'min-h-11 border border-gray-500 rounded px-2 py-1 text-sm text-gray-900 bg-white';
 
 // Sort menu and filters for product lists: category, price range, minimum
 // star rating and three quick toggles. Filters combine, and every change
@@ -49,14 +49,16 @@ const CatalogControls: React.FC<CatalogControlsProps> = ({ filters, onChange, re
   };
 
   const toggle = (key: 'nearLow' | 'priceLock' | 'recommended', label: string, hint: string) => (
-    <label className="inline-flex items-center gap-2 text-sm text-gray-800 cursor-pointer select-none" title={hint}>
+    <label className="inline-flex min-h-11 items-center gap-2 text-sm text-gray-800 cursor-pointer select-none" title={hint}>
       <input
         type="checkbox"
         checked={filters[key]}
         onChange={e => onChange({ ...filters, [key]: e.target.checked })}
-        className="w-4 h-4"
+        aria-describedby={`catalog-hint-${key}`}
+        className="w-5 h-5"
       />
       {label}
+      <span id={`catalog-hint-${key}`} className="sr-only">{hint}</span>
     </label>
   );
 
@@ -120,10 +122,11 @@ const CatalogControls: React.FC<CatalogControlsProps> = ({ filters, onChange, re
         </div>
 
         <form onSubmit={applyPrices} className="flex flex-col" aria-label="Price range">
-          <span className="text-xs font-medium text-gray-700" id="catalog-price-label">
-            Price range
-          </span>
-          <div className="flex items-center gap-1" role="group" aria-labelledby="catalog-price-label">
+          <fieldset>
+          <legend className="text-xs font-medium text-gray-700">Price range</legend>
+          <div className="flex items-end gap-2">
+            <label className="flex flex-col text-xs text-gray-700">
+            Min ($)
             <input
               type="number"
               min="0"
@@ -131,11 +134,11 @@ const CatalogControls: React.FC<CatalogControlsProps> = ({ filters, onChange, re
               inputMode="decimal"
               value={minPrice}
               onChange={e => setMinPrice(e.target.value)}
-              placeholder="Min"
-              aria-label="Minimum price"
-              className={`${field} w-20`}
+              className={`${field} w-24`}
             />
-            <span className="text-gray-600" aria-hidden="true">to</span>
+            </label>
+            <label className="flex flex-col text-xs text-gray-700">
+            Max ($)
             <input
               type="number"
               min="0"
@@ -143,14 +146,14 @@ const CatalogControls: React.FC<CatalogControlsProps> = ({ filters, onChange, re
               inputMode="decimal"
               value={maxPrice}
               onChange={e => setMaxPrice(e.target.value)}
-              placeholder="Max"
-              aria-label="Maximum price"
-              className={`${field} w-20`}
+              className={`${field} w-24`}
             />
-            <button type="submit" className="text-sm font-semibold border border-gray-300 rounded px-2 py-1 hover:bg-gray-50">
+            </label>
+            <button type="submit" className="min-h-11 text-sm font-semibold border border-gray-500 rounded px-4 hover:bg-gray-50">
               Apply
             </button>
           </div>
+          </fieldset>
         </form>
       </div>
 
@@ -172,7 +175,7 @@ const CatalogControls: React.FC<CatalogControlsProps> = ({ filters, onChange, re
           {toggle('recommended', 'Store recommended', 'Marked as recommended by Amazin')}
         </fieldset>
         {hasActiveFilters(filters) && (
-          <button type="button" onClick={() => onChange(clearedFilters(filters))} className="text-sm text-amazin-blue hover:underline">
+          <button type="button" onClick={() => onChange(clearedFilters(filters))} className="min-h-11 px-3 text-sm text-amazin-blue hover:underline">
             Clear filters
           </button>
         )}

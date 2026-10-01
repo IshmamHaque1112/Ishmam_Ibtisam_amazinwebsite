@@ -60,7 +60,7 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
               {product.sellerName}
             </a>
           </span>
-          {product.storeRecommended && <span className="text-green-700">✓ Store recommended</span>}
+          {product.storeRecommended && <span className="text-green-700"><span aria-hidden="true">✓ </span>Store recommended</span>}
         </div>
         <div className="text-xs mt-1">
           <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full">{rating.badge}</span>

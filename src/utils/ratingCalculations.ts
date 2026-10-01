@@ -17,13 +17,15 @@ export const calculateSellerRating = (seller: Seller): SellerRating => {
   const delivery = Math.round(seller.deliveryTimeRating * 20);
   const score = Math.round(clamp(price * 0.35 + quality * 0.4 + delivery * 0.25));
 
+  // Plain-text badges: emoji were read aloud ("fire", "turtle") and carried
+  // meaning by picture alone (WCAG 1.1.1, 1.3.1).
   let badge: string;
-  if (score >= 80) badge = '🔥 Top Value';
-  else if (seller.priceRating >= 4 && seller.qualityRating < 3) badge = '⚠️ Cheap but Risky';
-  else if (seller.qualityRating < 2.5) badge = '⚠️ Quality Concerns';
-  else if (seller.deliveryTimeRating < 2.2) badge = '🐢 Slow Delivery';
-  else if (score >= 70) badge = '👍 Good Choice';
-  else badge = '📦 Standard Seller';
+  if (score >= 80) badge = 'Top Value';
+  else if (seller.priceRating >= 4 && seller.qualityRating < 3) badge = 'Cheap but Risky';
+  else if (seller.qualityRating < 2.5) badge = 'Quality Concerns';
+  else if (seller.deliveryTimeRating < 2.2) badge = 'Slow Delivery';
+  else if (score >= 70) badge = 'Good Choice';
+  else badge = 'Standard Seller';
 
   return { score, badge, factors: { price, quality, delivery } };
 };
@@ -37,12 +39,12 @@ export const calculateProductRating = (product: Product, seller?: Seller): Produ
   const score = Math.round(clamp(customerRating * 0.5 + dealScore * 0.3 + sellerScore * 0.2));
 
   let badge: string;
-  if (product.rating >= 4.3 && dealScore >= 60) badge = '🔥 High Value & Top Quality';
-  else if (dealScore >= 85) badge = '📉 Near All-Time Low';
-  else if (dealScore <= 15) badge = '📈 Priced Near 30-Day High';
-  else if (product.rating < 3) badge = '⚠️ Low Customer Rating';
-  else if (score >= 65) badge = '✨ Good Value';
-  else badge = '📦 Standard';
+  if (product.rating >= 4.3 && dealScore >= 60) badge = 'High Value & Top Quality';
+  else if (dealScore >= 85) badge = 'Near All-Time Low';
+  else if (dealScore <= 15) badge = 'Priced Near 30-Day High';
+  else if (product.rating < 3) badge = 'Low Customer Rating';
+  else if (score >= 65) badge = 'Good Value';
+  else badge = 'Standard';
 
   return { score, badge, factors: { customerRating, dealScore, sellerScore } };
 };

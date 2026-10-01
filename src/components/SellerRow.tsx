@@ -94,7 +94,7 @@ const SellerRow: React.FC<SellerRowProps> = ({ seller, productCount = 0, tags = 
         <span className="bg-green-50 text-green-800 px-2 py-0.5 rounded-full">{rating.badge}</span>
         <div className="text-gray-500 mt-1">
           {productCount} {productCount === 1 ? 'product' : 'products'}
-          {seller.priceLockEligible && ' · 🔒 Price lock'}
+          {seller.priceLockEligible && <> · <span aria-hidden="true" className="mr-1">🔒</span>Price lock</>}
         </div>
       </div>
     </li>

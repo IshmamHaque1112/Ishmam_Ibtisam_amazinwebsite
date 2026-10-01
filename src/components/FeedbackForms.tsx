@@ -59,7 +59,7 @@ export const ReviewForm: React.FC<{
               onClick={() => setRating(star)}
               aria-label={`${star} star${star === 1 ? '' : 's'}`}
               aria-pressed={rating === star}
-              className={`text-2xl leading-none px-1 rounded ${rating >= star ? 'text-amber-600' : 'text-gray-400'}`}
+              className={`min-h-11 min-w-11 text-2xl leading-none rounded ${rating >= star ? 'text-amber-700' : 'text-gray-500'}`}
             >
               ★
             </button>
@@ -74,7 +74,7 @@ export const ReviewForm: React.FC<{
           value={title}
           maxLength={MAX_TITLE}
           onChange={e => setTitle(e.target.value)}
-          className="w-full text-sm border border-gray-300 rounded px-3 py-1.5"
+          className="w-full min-h-11 text-sm border border-gray-500 rounded px-3 py-2"
           placeholder="Summarize your review"
         />
       </div>
@@ -85,7 +85,7 @@ export const ReviewForm: React.FC<{
           value={text}
           maxLength={MAX_TEXT}
           onChange={e => setText(e.target.value)}
-          className="w-full text-sm border border-gray-300 rounded px-3 py-1.5"
+          className="w-full text-sm border border-gray-500 rounded px-3 py-2"
           rows={4}
           placeholder={`Share your experience with this ${subject}`}
         />
@@ -96,7 +96,7 @@ export const ReviewForm: React.FC<{
       <button
         type="submit"
         disabled={saving}
-        className="text-sm font-semibold bg-amazin-orange text-gray-900 px-4 py-2 rounded hover:bg-amazin-yellow disabled:bg-gray-300 disabled:text-gray-600"
+        className="min-h-11 text-sm font-semibold bg-amazin-orange text-gray-900 px-4 rounded hover:brightness-95 disabled:bg-gray-200 disabled:text-gray-700"
       >
         {saving ? 'Saving…' : 'Submit review'}
       </button>
@@ -149,13 +149,13 @@ export const TagForm: React.FC<{
           maxLength={MAX_TAG}
           onChange={e => setTag(e.target.value)}
           placeholder="e.g. sturdy, runs small"
-          className="flex-1 min-w-0 text-sm border border-gray-300 rounded px-3 py-1.5"
+          className="flex-1 min-w-0 min-h-11 text-sm border border-gray-500 rounded px-3 py-2"
           aria-describedby={`${id}-hint`}
         />
         <button
           type="submit"
           disabled={saving}
-          className="text-sm font-semibold bg-amazin-orange text-gray-900 px-3 py-1.5 rounded hover:bg-amazin-yellow disabled:bg-gray-300 disabled:text-gray-600"
+          className="min-h-11 text-sm font-semibold bg-amazin-orange text-gray-900 px-4 rounded hover:brightness-95 disabled:bg-gray-200 disabled:text-gray-700"
         >
           {saving ? 'Saving…' : 'Add'}
         </button>

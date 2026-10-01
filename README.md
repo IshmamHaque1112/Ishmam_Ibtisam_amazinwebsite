@@ -17,9 +17,9 @@ A functional, Amazon-style digital marketplace that puts price history, seller d
 
 ### Accounts and guests
 - **Guests can browse everything.** A username login is needed to use the cart, see orders, and post reviews or tags.
-- **Log in** with an existing username from `customers.csv` (for example `ava.nguyen`).
+- **Log in** with a username and password. In Supabase mode passwords are checked by Supabase Auth (each username maps to a non-deliverable `@accounts.amazin.invalid` address; see `src/lib/supabase.ts`). Demo accounts get their passwords from `scripts/seed-auth-users.mjs`, which reads a seed file kept outside the repo.
 - **Register** a new account with a username and display name. In CSV mode new accounts are kept in this browser; in Supabase mode they are saved to the `customers` table.
-- Usernames are checked (3-30 characters: letters, numbers, `.`, `-`, `_`). **There are no passwords in this prototype.** The login page says so; it used to show a password box that accepted anything.
+- Usernames are checked (3-30 characters: letters, numbers, `.`, `-`, `_`). In CSV mode (no Supabase), passwords are salted and hashed with Web Crypto and kept in this browser only (`src/utils/localAuth.ts`). Because the synthetic email can't receive mail, there is no password reset yet.
 
 ### Cart
 - The cart is grouped into folders plus **Unassigned items**. Each item has a **Folder** menu to move it into a folder, back out to Unassigned, or into a new folder. On desktop you can also drag an item onto a folder.
@@ -40,7 +40,7 @@ The site runs in one of two modes (see `SUPABASE_SETUP.md`):
 
 | File | Contents | Rows |
 |---|---|---|
-| `products.csv` | products | 25 |
+| `products.csv` | products | 45 |
 | `sellers.csv` | sellers | 25 |
 | `seller_blurbs.csv` | seller descriptions | 25 |
 | `customers.csv` | demo customers (no passwords) | 25 |
@@ -58,6 +58,13 @@ Everything in `src/data/` is bundled into the public JavaScript, so it must neve
 - Zustand for the session and cart
 - Supabase (optional, loaded on demand) or the bundled CSV files for the catalog
 - Hash routing (`#/products`, `#/product/P001`, `#/sellers`, `#/seller/S003`, `#/search?...`, `#/login`, `#/cart`, `#/account`), which works on Vercel with no rewrite rules
+
+## Database scripts
+
+- `supabase-setup.sql`: tables, read policies and seed data (run first).
+- `supabase/metrics-workers.sql`: daily price snapshots, product and seller scores, volatility and badges, computed in Postgres with the same formulas as `src/utils/ratingCalculations.ts`.
+- `supabase/search-products.sql`: server-side filtering, sorting and paging for a future `/api/products` endpoint.
+- `supabase/security-lockdown.sql`: replaces the open anon insert policies. Read its header before running it.
 
 ## Getting started
 
@@ -90,6 +97,6 @@ tests/               # unit tests (npm test)
 
 ## Security notes
 - No secrets in the code. `.env` is git-ignored, and the Supabase anon key is meant to be public (never put the `service_role` key in a `VITE_` variable).
-- The bundled data has no passwords.
+- The bundled data has no passwords (`tests/csv.test.ts` fails the build if `customers.csv` gains a password column).
 - The post-login redirect only accepts in-app routes.
-- Prototype auth: usernames only, no passwords, stored client-side. Anyone can log in as any username. It is not suitable for real accounts or payments; real sign-in would need Supabase Auth.
+- Auth: Supabase Auth in Supabase mode; a local hashed fallback in CSV mode. Reviews and tags are still insertable by the public anon key until `supabase/security-lockdown.sql` is applied (see that file's header). Not suitable for real payments.

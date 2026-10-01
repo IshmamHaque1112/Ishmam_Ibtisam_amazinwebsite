@@ -85,7 +85,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
     setError(null);
   };
 
-  const field = 'border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white max-w-full';
+  const field = 'min-h-11 border border-gray-500 rounded px-2 py-1 text-sm text-gray-900 bg-white max-w-full';
 
   return (
     <form
@@ -200,7 +200,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ initial, onSearched }) => {
           >
             Search
           </button>
-          <button type="button" onClick={handleClear} className="text-sm text-gray-700 hover:underline px-2">
+          <button type="button" onClick={handleClear} className="min-h-11 text-sm text-gray-700 hover:underline px-3">
             Clear
           </button>
         </div>
