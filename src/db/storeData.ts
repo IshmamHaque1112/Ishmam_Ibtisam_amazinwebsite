@@ -70,6 +70,10 @@ export const validatePassword = (password: string): string | null => {
 type Row = Record<string, unknown>;
 
 const str = (v: unknown): string => (v === null || v === undefined ? '' : String(v));
+const first = (row: Row, ...keys: string[]): unknown => {
+  for (const key of keys) if (row[key] !== null && row[key] !== undefined) return row[key];
+  return undefined;
+};
 const num = (v: unknown): number => {
   const n = typeof v === 'number' ? v : Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -117,47 +121,47 @@ const toCustomer = (r: Row): Customer => ({
 });
 
 const toProductReview = (r: Row): ProductReview => ({
-  reviewId: str(r.review_id),
-  productId: str(r.product_id),
-  username: str(r.username),
-  rating: num(r.rating),
-  title: r.title ? str(r.title) : undefined,
-  reviewText: r.review_text ? str(r.review_text) : undefined,
-  reviewDate: str(r.review_date).slice(0, 10),
-  helpfulVotes: num(r.helpful_votes)
+  reviewId: str(first(r, 'review_id', 'product_review_id', 'id')),
+  productId: str(first(r, 'product_id', 'productId')),
+  username: str(first(r, 'username', 'reviewer_username', 'reviewer_name', 'user_name')),
+  rating: num(first(r, 'rating', 'review_rating', 'product_rating')),
+  title: first(r, 'title', 'review_title') ? str(first(r, 'title', 'review_title')) : undefined,
+  reviewText: first(r, 'review_text', 'reviewText', 'review', 'text', 'body', 'content') ? str(first(r, 'review_text', 'reviewText', 'review', 'text', 'body', 'content')) : undefined,
+  reviewDate: str(first(r, 'review_date', 'reviewDate', 'date_written', 'created_at', 'date')).slice(0, 10),
+  helpfulVotes: num(first(r, 'helpful_votes', 'helpfulVotes', 'helpful_count'))
 });
 
 const toSellerReview = (r: Row): SellerReview => ({
-  reviewId: str(r.review_id),
-  sellerId: str(r.seller_id),
-  username: str(r.username),
-  rating: num(r.rating),
-  title: r.title ? str(r.title) : undefined,
-  reviewText: r.review_text ? str(r.review_text) : undefined,
-  reviewDate: str(r.review_date).slice(0, 10),
-  helpfulVotes: num(r.helpful_votes),
+  reviewId: str(first(r, 'review_id', 'seller_review_id', 'id')),
+  sellerId: str(first(r, 'seller_id', 'sellerId')),
+  username: str(first(r, 'username', 'reviewer_username', 'reviewer_name', 'user_name')),
+  rating: num(first(r, 'rating', 'review_rating', 'seller_rating')),
+  title: first(r, 'title', 'review_title') ? str(first(r, 'title', 'review_title')) : undefined,
+  reviewText: first(r, 'review_text', 'reviewText', 'review', 'text', 'body', 'content') ? str(first(r, 'review_text', 'reviewText', 'review', 'text', 'body', 'content')) : undefined,
+  reviewDate: str(first(r, 'review_date', 'reviewDate', 'date_written', 'created_at', 'date')).slice(0, 10),
+  helpfulVotes: num(first(r, 'helpful_votes', 'helpfulVotes', 'helpful_count')),
   // Only present if the Supabase table has a verified_buyer column.
-  verifiedBuyer: r.verified_buyer === true ? true : undefined
+  verifiedBuyer: first(r, 'verified_buyer', 'verifiedBuyer') === true ? true : undefined
 });
 
 const toProductTag = (r: Row): ProductTagRow => ({
-  productId: str(r.product_id),
-  tagName: str(r.tag_name),
-  addedByUsername: str(r.added_by_username),
-  dateAdded: str(r.date_added).slice(0, 10)
+  productId: str(first(r, 'product_id', 'productId')),
+  tagName: str(first(r, 'tag_name', 'tag', 'name')),
+  addedByUsername: str(first(r, 'added_by_username', 'tagged_by_username', 'username', 'added_by')),
+  dateAdded: str(first(r, 'date_added', 'dateAdded', 'created_at', 'date')).slice(0, 10)
 });
 
 const toSellerTag = (r: Row): SellerTagRow => ({
-  sellerId: str(r.seller_id),
-  tagName: str(r.tag_name),
-  addedByUsername: str(r.added_by_username),
-  dateAdded: str(r.date_added).slice(0, 10)
+  sellerId: str(first(r, 'seller_id', 'sellerId')),
+  tagName: str(first(r, 'tag_name', 'tag', 'name')),
+  addedByUsername: str(first(r, 'added_by_username', 'tagged_by_username', 'username', 'added_by')),
+  dateAdded: str(first(r, 'date_added', 'dateAdded', 'created_at', 'date')).slice(0, 10)
 });
 
 const toPricePoint = (r: Row): PriceHistoryPoint => ({
-  productId: str(r.product_id),
-  price: num(r.price),
-  recordedAt: str(r.recorded_at).slice(0, 10)
+  productId: str(first(r, 'product_id', 'productId')),
+  price: num(first(r, 'price', 'product_price', 'current_price')),
+  recordedAt: str(first(r, 'recorded_at', 'recordedAt', 'price_date', 'history_date', 'date', 'created_at')).slice(0, 10)
 });
 
 // Groups tag rows into "tag (count)" chips, most used first.
@@ -367,7 +371,7 @@ export class StoreData {
   }
 
   async addProductTag(tag: NewProductTag): Promise<void> {
-    const saved = await this.insert('product_tags', {
+    const saved = await this.insert(['product_tags', 'product_tag'], {
       product_id: tag.productId,
       tag_name: tag.tagName,
       added_by_username: tag.addedByUsername,
@@ -379,7 +383,7 @@ export class StoreData {
   }
 
   async addSellerTag(tag: NewSellerTag): Promise<void> {
-    const saved = await this.insert('seller_tags', {
+    const saved = await this.insert(['seller_tags', 'seller_tag'], {
       seller_id: tag.sellerId,
       tag_name: tag.tagName,
       added_by_username: tag.addedByUsername,
@@ -501,14 +505,17 @@ export class StoreData {
   // Inserts into Supabase and returns the saved row (with its generated id),
   // or null in CSV mode. Throws if Supabase rejects the write so the page can
   // tell the shopper.
-  private async insert(table: string, values: Row): Promise<Row | null> {
+  private async insert(table: string | string[], values: Row): Promise<Row | null> {
     if (this.source !== 'supabase' || !supabase) return null;
-    const { data, error } = await supabase.from(table).insert(values).select().single();
-    if (error) {
-      console.error(`Supabase insert into ${table} failed:`, error);
-      throw new Error(error.message);
+    const tables = Array.isArray(table) ? table : [table];
+    let lastError: { message: string } | null = null;
+    for (const name of tables) {
+      const { data, error } = await supabase.from(name).insert(values).select().single();
+      if (!error) return data as Row;
+      lastError = error;
     }
-    return data as Row;
+    console.error(`Supabase insert into ${tables.join(' or ')} failed:`, lastError);
+    throw new Error(lastError?.message ?? 'Supabase insert failed.');
   }
 
   private persistLocal() {
@@ -547,14 +554,29 @@ const loadFromCsv = (): StoreData => {
 
 // Optional tables (reviews, tags, price history) may not exist yet; treat a
 // missing table as empty instead of failing the whole store.
-const fetchOptional = async (table: string, columns = '*'): Promise<Row[]> => {
+const fetchOptional = async (table: string | string[], columns = '*'): Promise<Row[]> => {
   if (!supabase) return [];
-  const { data, error } = await supabase.from(table).select(columns);
-  if (error) {
-    console.warn(`Supabase table "${table}" unavailable (${error.message}); continuing without it.`);
-    return [];
+  const tables = Array.isArray(table) ? table : [table];
+  let lastError: { message: string } | null = null;
+  let querySucceeded = false;
+  for (const name of tables) {
+    const { data, error } = await supabase.from(name).select(columns);
+    if (error) {
+      lastError = error;
+      continue;
+    }
+    querySucceeded = true;
+    if (data?.length) {
+      if (tables.length > 1 && name !== tables[0]) {
+        console.info(`Loaded optional data from Supabase table "${name}".`);
+      }
+      return data as unknown as Row[];
+    }
   }
-  return (data || []) as unknown as Row[];
+  if (lastError && !querySucceeded) {
+    console.warn(`Supabase table "${tables.join(' or ')}" unavailable (${lastError.message}); continuing without it.`);
+  }
+  return [];
 };
 
 const loadFromSupabase = async (): Promise<StoreData> => {
@@ -574,8 +596,8 @@ const loadFromSupabase = async (): Promise<StoreData> => {
     fetchOptional('customers', 'customer_id, username, display_name, join_date, account_type, favorite_category'),
     fetchOptional('product_reviews'),
     fetchOptional('seller_reviews'),
-    fetchOptional('product_tags'),
-    fetchOptional('seller_tags'),
+    fetchOptional(['product_tags', 'product_tag']),
+    fetchOptional(['seller_tags', 'seller_tag']),
     fetchOptional('price_history')
   ]);
 
@@ -586,6 +608,14 @@ const loadFromSupabase = async (): Promise<StoreData> => {
     const map = new Map(blurbs.map(b => [str(b.seller_id), b.blurb]));
     sellerRows = sellerRows.map(s => ({ ...s, blurb: map.get(str(s.seller_id)) ?? null }));
   }
+
+  console.info('Supabase optional rows loaded:', {
+    productReviews: productReviews.length,
+    sellerReviews: sellerReviews.length,
+    productTags: productTags.length,
+    sellerTags: sellerTags.length,
+    priceHistory: priceHistory.length
+  });
 
   return new StoreData(
     'supabase',
