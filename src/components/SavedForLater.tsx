@@ -58,7 +58,7 @@ const SavedForLater: React.FC<SavedForLaterProps> = ({ products, sellers }) => {
                 )}
                 {change === 0 && <p className="text-xs text-gray-500">Same price as when you saved it</p>}
                 {isLockActive(item) && (
-                  <p className="text-xs text-green-700">🔒 Price lock at {formatMoney(item.lockedPrice as number)} is still running</p>
+                  <p className="text-xs text-green-700"><span aria-hidden="true" className="mr-1">🔒</span>Price lock at {formatMoney(item.lockedPrice as number)} is still running</p>
                 )}
 
                 <div className="flex items-center gap-4 mt-2">

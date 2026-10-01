@@ -27,7 +27,7 @@ const Header: React.FC<HeaderProps> = ({ route }) => {
     </a>
   );
 
-  const iconButton = 'p-2 rounded hover:bg-white/10 hover:text-amazin-orange relative inline-flex';
+  const iconButton = 'p-2.5 rounded hover:bg-white/10 hover:text-amazin-orange relative inline-flex';
 
   return (
     <header className="sticky top-0 z-40">

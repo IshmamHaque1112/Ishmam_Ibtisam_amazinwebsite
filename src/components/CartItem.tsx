@@ -142,11 +142,11 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLa
             <div className="mt-2">
               {lockActive ? (
                 <div className="bg-green-50 text-green-800 text-xs px-2 py-1 rounded-full inline-flex items-center">
-                  🔒 Locked at {formatMoney(item.lockedPrice as number)} · {countdown} left
+                  <span aria-hidden="true" className="mr-1">🔒</span>Locked at {formatMoney(item.lockedPrice as number)} · {countdown} left
                 </div>
               ) : (
                 <div className="bg-red-50 text-red-800 text-xs px-2 py-1 rounded-full inline-flex items-center">
-                  🔓 Price lock expired
+                  <span aria-hidden="true" className="mr-1">🔓</span>Price lock expired
                 </div>
               )}
             </div>

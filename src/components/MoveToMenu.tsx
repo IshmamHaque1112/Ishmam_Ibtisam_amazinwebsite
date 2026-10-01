@@ -44,7 +44,7 @@ const MoveToMenu: React.FC<MoveToMenuProps> = ({ itemId, currentFolderId, produc
         id={`${id}-folder`}
         value={naming ? NEW_FOLDER : currentFolderId ?? UNASSIGNED}
         onChange={e => handleChange(e.target.value)}
-        className="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 max-w-[12rem]"
+        className="min-h-11 text-sm border border-gray-500 rounded px-2 py-1 bg-white text-gray-900 max-w-[12rem]"
         aria-label={`Folder for ${productName}`}
       >
         <option value={UNASSIGNED}>Unassigned items</option>
@@ -69,7 +69,7 @@ const MoveToMenu: React.FC<MoveToMenuProps> = ({ itemId, currentFolderId, produc
             aria-label={`Name the new folder for ${productName}`}
             maxLength={40}
             autoFocus
-            className="w-36 px-2 py-1 text-sm border border-gray-300 rounded"
+            className="w-36 min-h-11 px-2 py-1 text-sm border border-gray-500 rounded"
           />
           <button
             type="button"

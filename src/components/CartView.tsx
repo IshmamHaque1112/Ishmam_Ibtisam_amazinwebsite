@@ -271,7 +271,7 @@ const CartView: React.FC = () => {
                   if (e.key === 'Enter') handleCreateFolder();
                 }}
                 placeholder="New folder name (e.g. Pantry)"
-                className="flex-1 min-w-[10rem] px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amazin-orange focus:border-transparent"
+                className="flex-1 min-w-[10rem] min-h-11 px-3 py-2 border border-gray-500 rounded-md"
               />
               <button
                 type="button"
