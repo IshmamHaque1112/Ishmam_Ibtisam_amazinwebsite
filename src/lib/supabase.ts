@@ -45,16 +45,21 @@ export const usernameToAuthEmail = (username: string) => `${username.trim().toLo
 export interface AuthResult {
   ok: boolean;
   error?: string;
+  userId?: string;
 }
 
 // Creates the Auth user that holds this username's password. Doesn't touch
 // the public `customers` table - the caller inserts that row separately.
-export const authSignUp = async (username: string, password: string): Promise<AuthResult> => {
+export const authSignUp = async (username: string, password: string, displayName?: string): Promise<AuthResult> => {
   const supabase = await getSupabase();
   if (!supabase) return { ok: false, error: 'Sign-up needs a live Supabase connection.' };
-  const { error } = await supabase.auth.signUp({ email: usernameToAuthEmail(username), password });
+  const { data, error } = await supabase.auth.signUp({
+    email: usernameToAuthEmail(username),
+    password,
+    options: displayName ? { data: { display_name: displayName } } : undefined
+  });
   if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  return { ok: true, userId: data.user?.id };
 };
 
 // Real verification: this fails if the password is wrong, unlike the old

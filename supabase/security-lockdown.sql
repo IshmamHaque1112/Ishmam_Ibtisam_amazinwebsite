@@ -1,10 +1,8 @@
--- READ BEFORE RUNNING: this closes the open "anon can insert anything" policies.
--- Ship it together with the app change that stops the browser inserting into
--- `customers` (registerCustomer should call supabase.auth.signUp with
--- options.data.display_name and let the trigger below create the row), and
--- backfill customers.auth_user_id for the demo accounts. Running it alone
--- will make new sign-ups fail. Needs a server-side checkout that writes
--- `orders` before seller reviews can be posted again.
+-- Closes the open "anon can insert anything" policies. The app signup flow
+-- sends display_name as Auth metadata and lets the trigger below create the
+-- customers row. Backfill customers.auth_user_id for any existing accounts.
+-- Needs a server-side checkout that writes orders before seller reviews can
+-- be posted again.
 -- ============ Lock down writes: signed-in users only, as themselves ============
 -- Run after supabase-setup.sql. Safe to run more than once.
 

@@ -660,12 +660,14 @@ export class StoreData {
     if (passwordError) return { error: passwordError };
     if (await this.findCustomer(name)) return { error: 'That username is already taken.' };
 
-    // Create the password first. If this is Supabase and it fails (for
-    // example the synthetic email is somehow already in use), nothing else
-    // has been written yet.
+    // Supabase's lockdown migration creates the public customer row from an
+    // Auth trigger, so pass display_name as metadata and reuse that row. Older
+    // projects without the trigger still use the legacy customer insert below.
     if (this.source === 'supabase' && supabase) {
-      const auth = await authSignUp(name, password);
+      const auth = await authSignUp(name, password, display);
       if (!auth.ok) return { error: auth.error ?? 'Could not set a password for this account.' };
+      const triggerCreatedCustomer = await this.findCustomer(name);
+      if (triggerCreatedCustomer) return { customer: triggerCreatedCustomer };
     } else {
       await setLocalPassword(name, password);
     }
@@ -677,7 +679,8 @@ export class StoreData {
       joinDate: new Date().toISOString().slice(0, 10),
       accountType: 'New',
       favoriteCategory: null,
-      password: ''
+      password: '',
+      role: 'shopper'
     };
 
     if (this.source === 'supabase' && supabase) {
@@ -692,8 +695,16 @@ export class StoreData {
         has_left_seller_ratings: 0
       });
       if (error) {
+        // An Auth trigger can win a race against this compatibility insert.
+        // If so, return the row it created instead of reporting a false error.
+        const triggerCreatedCustomer = await this.findCustomer(name);
+        if (triggerCreatedCustomer) return { customer: triggerCreatedCustomer };
         console.error('Supabase registerCustomer error:', error);
-        return { error: 'Could not create the account right now. Please try again.' };
+        return {
+          error: error.code === '42501'
+            ? 'Supabase blocked customer-row creation. Apply the signup trigger from supabase/security-lockdown.sql, then remove any Auth account left by this failed attempt before retrying.'
+            : 'Could not create the account right now. Please try again.'
+        };
       }
     }
 
