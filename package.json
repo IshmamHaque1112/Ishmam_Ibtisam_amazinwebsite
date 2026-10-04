@@ -10,7 +10,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "node tests/run.mjs",
     "typecheck": "tsc --noEmit",
-    "seed:seller-auth": "node scripts/seed-seller-auth-users.mjs"
+    "seed:seller-auth": "node scripts/seed-seller-auth-users.mjs",
+    "seed:all-auth": "node scripts/seed-all-auth-users.mjs"
   },
   "dependencies": {
     "react": "^18.2.0",
