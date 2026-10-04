@@ -72,6 +72,12 @@ export const CartIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
   </svg>
 );
 
+export const ChatIcon: React.FC<IconProps> = ({ className = 'w-6 h-6' }) => (
+  <svg {...base} className={className}>
+    <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z" />
+  </svg>
+);
+
 // Real stock photos for 9 of the 10 catalog categories. "Home Decor" has no
 // matching photo yet (the provided set had no home-decor-specific image) and
 // falls back to an initials tile below. "Appliances" reuses the Home & Kitchen

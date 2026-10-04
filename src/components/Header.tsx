@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/store';
 import { href, Route } from '../router';
-import { CartIcon, KeyIcon, SearchIcon } from './Icons';
+import { CartIcon, ChatIcon, KeyIcon, SearchIcon } from './Icons';
 import SearchBar from './SearchBar';
 import logoMark from '../assets/logo-mark.png';
+import { useDb } from '../db/DbProvider';
 
 interface HeaderProps {
   route: Route;
@@ -11,6 +12,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ route }) => {
   const { username, cartItems } = useStore();
+  const db = useDb();
+  const customer = username ? db.getCustomer(username) : undefined;
   const [searchOpen, setSearchOpen] = useState(route.name === 'search');
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -74,6 +77,18 @@ const Header: React.FC<HeaderProps> = ({ route }) => {
                 <span className="hidden sm:inline text-xs text-gray-200 max-w-[120px] truncate">{username}</span>
               )}
             </a>
+
+            {username && customer?.role !== 'seller' && (
+              <a
+                href={href.feedbackChat()}
+                className={`${iconButton} ${route.name === 'feedbackChat' ? 'text-amazin-orange' : ''}`}
+                aria-label="Messages with sellers"
+                aria-current={route.name === 'feedbackChat' ? 'page' : undefined}
+                title="Messages"
+              >
+                <ChatIcon />
+              </a>
+            )}
 
             <a
               href={username ? href.cart() : href.login(href.cart())}

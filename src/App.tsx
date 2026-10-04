@@ -62,8 +62,14 @@ function App() {
         return username ? <SellerInventoryPage /> : <LoginPage params={new URLSearchParams({ next: href.sellerInventory() })} />;
       case 'sellerFeedback':
         return username ? <SellerFeedbackPage /> : <LoginPage params={new URLSearchParams({ next: href.sellerFeedback() })} />;
-      case 'feedbackChat':
-        return username ? <FeedbackChatPage /> : <LoginPage params={new URLSearchParams({ next: href.feedbackChat() })} />;
+      case 'feedbackChat': {
+        const nextFeedback = route.threadId
+          ? href.feedbackChat(route.threadId)
+          : route.params.get('seller')
+            ? href.startFeedback(route.params.get('seller')!, route.params.get('product') ?? undefined)
+            : href.feedbackChat();
+        return username ? <FeedbackChatPage threadId={route.threadId} params={route.params} /> : <LoginPage params={new URLSearchParams({ next: nextFeedback })} />;
+      }
       default:
         return <NotFoundPage />;
     }

@@ -2,6 +2,8 @@ import productsCsv from '../data/products.csv?raw';
 import sellersCsv from '../data/sellers.csv?raw';
 import customersCsv from '../data/customers.csv?raw';
 import sellerBlurbsCsv from '../data/seller_blurbs.csv?raw';
+import feedbackThreadsCsv from '../../supabase/feedback_threads_seed.csv?raw';
+import feedbackMessagesCsv from '../../supabase/feedback_messages_seed.csv?raw';
 import { parseCsv } from './csv';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase, authSignUp, authSignIn, authSignOut } from '../lib/supabase';
@@ -429,6 +431,19 @@ export class StoreData {
     return this.feedbackMessages.filter(m => m.threadId === threadId).sort((a, b) => a.sentAt.localeCompare(b.sentAt));
   }
 
+  async refreshFeedback(): Promise<void> {
+    if (this.source !== 'supabase' || !supabase) return;
+    const [threads, messages] = await Promise.all([
+      supabase.from('feedback_threads').select('*'),
+      supabase.from('feedback_messages').select('*')
+    ]);
+    if (threads.error) throw new Error(threads.error.message);
+    if (messages.error) throw new Error(messages.error.message);
+    this.feedbackThreads = (threads.data ?? []).map(toFeedbackThread);
+    this.feedbackMessages = (messages.data ?? []).map(toFeedbackMessage);
+    this.onChange();
+  }
+
   async createFeedbackThread(thread: Omit<FeedbackThread, 'threadId' | 'createdAt'>): Promise<FeedbackThread> {
     const saved = await this.insert('feedback_threads', {
       customer_username: thread.customerUsername,
@@ -614,6 +629,10 @@ export class StoreData {
   }
 
   // Customers
+  getCustomer(username: string): Customer | undefined {
+    return this.customers.find(c => c.username.toLowerCase() === normalizeUsername(username));
+  }
+
   async findCustomer(username: string): Promise<Customer | undefined> {
     const name = normalizeUsername(username);
     const local = this.customers.find(c => c.username.toLowerCase() === name);
@@ -761,6 +780,10 @@ const loadFromCsv = (): StoreData => {
   const products = parseCsv(productsCsv).map(toProduct);
   const local = readLocal();
   const customers = [...parseCsv(customersCsv).map(toCustomer), ...local.customers];
+  const seedThreads = parseCsv(feedbackThreadsCsv).map(toFeedbackThread);
+  const seedMessages = parseCsv(feedbackMessagesCsv).map(toFeedbackMessage);
+  const feedbackThreads = [...seedThreads, ...local.feedbackThreads.filter(t => !seedThreads.some(seed => seed.threadId === t.threadId))];
+  const feedbackMessages = [...seedMessages, ...local.feedbackMessages.filter(m => !seedMessages.some(seed => seed.messageId === m.messageId))];
   return new StoreData(
     'csv',
     products,
@@ -771,8 +794,8 @@ const loadFromCsv = (): StoreData => {
     local.productTags,
     local.sellerTags,
     [],
-    local.feedbackThreads,
-    local.feedbackMessages,
+    feedbackThreads,
+    feedbackMessages,
     local.cartHolds
   );
 };

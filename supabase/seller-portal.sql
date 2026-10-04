@@ -53,8 +53,25 @@ alter table feedback_messages enable row level security;
 drop policy if exists feedback_threads_participant on feedback_threads;
 create policy feedback_threads_participant on feedback_threads for select to authenticated using (
   customer_username = (select username from customers where auth_user_id = auth.uid())
-  or seller_id = (select managed_seller_id from customers where auth_user_id = auth.uid())
+  or (seller_id = (select managed_seller_id from customers where auth_user_id = auth.uid())
+      and (select role from customers where auth_user_id = auth.uid()) = 'seller')
 );
+-- Participants may reopen/resolve a conversation. Limit column privileges to
+-- status so a client cannot rewrite the customer, seller, or product binding.
+drop policy if exists feedback_threads_participant_update on feedback_threads;
+create policy feedback_threads_participant_update on feedback_threads for update to authenticated
+  using (
+    customer_username = (select username from customers where auth_user_id = auth.uid())
+    or (seller_id = (select managed_seller_id from customers where auth_user_id = auth.uid())
+        and (select role from customers where auth_user_id = auth.uid()) = 'seller')
+  )
+  with check (
+    customer_username = (select username from customers where auth_user_id = auth.uid())
+    or (seller_id = (select managed_seller_id from customers where auth_user_id = auth.uid())
+        and (select role from customers where auth_user_id = auth.uid()) = 'seller')
+  );
+revoke update on feedback_threads from anon, authenticated;
+grant update (status) on feedback_threads to authenticated;
 drop policy if exists feedback_messages_participant on feedback_messages;
 create policy feedback_messages_participant on feedback_messages for select to authenticated using (
   exists (select 1 from feedback_threads t where t.thread_id = feedback_messages.thread_id and (
@@ -67,12 +84,15 @@ create policy feedback_messages_participant on feedback_messages for select to a
 drop policy if exists feedback_threads_customer_insert on feedback_threads;
 create policy feedback_threads_customer_insert on feedback_threads for insert to authenticated with check (
   customer_username = (select username from customers where auth_user_id = auth.uid())
+  and (select role from customers where auth_user_id = auth.uid()) in ('shopper', 'admin')
 );
 drop policy if exists feedback_messages_participant_insert on feedback_messages;
 create policy feedback_messages_participant_insert on feedback_messages for insert to authenticated with check (
   exists (select 1 from feedback_threads t where t.thread_id = feedback_messages.thread_id and (
-    (sender_type = 'customer' and t.customer_username = (select username from customers where auth_user_id = auth.uid()))
-    or (sender_type = 'seller' and t.seller_id = (select managed_seller_id from customers where auth_user_id = auth.uid()))
+    (sender_type = 'customer' and t.customer_username = (select username from customers where auth_user_id = auth.uid())
+      and (select role from customers where auth_user_id = auth.uid()) in ('shopper', 'admin'))
+    or (sender_type = 'seller' and t.seller_id = (select managed_seller_id from customers where auth_user_id = auth.uid())
+      and (select role from customers where auth_user_id = auth.uid()) = 'seller')
   ))
 );
 

@@ -177,6 +177,9 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
               <a href={href.seller(seller.id)} className="text-amazin-blue font-medium hover:underline">
                 {seller.name}
               </a>
+              <a href={username ? href.startFeedback(seller.id, product.id) : href.login(href.startFeedback(seller.id, product.id))} className="mt-2 inline-flex rounded border border-amazin-blue px-3 py-1.5 text-sm font-medium text-amazin-blue hover:bg-blue-50">
+                Ask about this product
+              </a>
               <p className="mt-1">
                 <span className="bg-green-50 text-green-800 px-2 py-0.5 rounded-full text-xs">{sellerRating.badge}</span>
                 <span className="ml-2 text-gray-600">Seller score {sellerRating.score}/100</span>

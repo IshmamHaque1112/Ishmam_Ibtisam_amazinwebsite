@@ -161,6 +161,9 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
               <dd className="inline">{seller.priceLockEligible ? '🔒 Available on this seller’s items' : 'Not available'}</dd>
             </div>
           </dl>
+          <a href={username ? href.startFeedback(seller.id) : href.login(href.startFeedback(seller.id))} className="mt-4 inline-flex rounded bg-amazin-orange px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-amazin-yellow">
+            Message this seller
+          </a>
         </div>
         <div className="space-y-3">
           <RatingBar label="Price" value={seller.priceRating} />
