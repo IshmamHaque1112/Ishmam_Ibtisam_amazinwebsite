@@ -13,6 +13,10 @@ import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import HomePage from './pages/HomePage';
 import AccountPage from './pages/AccountPage';
+import SellerDashboardPage from './pages/SellerDashboardPage';
+import SellerInventoryPage from './pages/SellerInventoryPage';
+import SellerFeedbackPage from './pages/SellerFeedbackPage';
+import FeedbackChatPage from './pages/FeedbackChatPage';
 
 function App() {
   const route = useRoute();
@@ -52,6 +56,14 @@ function App() {
         return username ? <CartView /> : <LoginPage params={new URLSearchParams({ next: href.cart() })} />;
       case 'account':
         return username ? <AccountPage /> : <LoginPage params={new URLSearchParams({ next: href.account() })} />;
+      case 'sellerDashboard':
+        return username ? <SellerDashboardPage /> : <LoginPage params={new URLSearchParams({ next: href.sellerDashboard() })} />;
+      case 'sellerInventory':
+        return username ? <SellerInventoryPage /> : <LoginPage params={new URLSearchParams({ next: href.sellerInventory() })} />;
+      case 'sellerFeedback':
+        return username ? <SellerFeedbackPage /> : <LoginPage params={new URLSearchParams({ next: href.sellerFeedback() })} />;
+      case 'feedbackChat':
+        return username ? <FeedbackChatPage /> : <LoginPage params={new URLSearchParams({ next: href.feedbackChat() })} />;
       default:
         return <NotFoundPage />;
     }

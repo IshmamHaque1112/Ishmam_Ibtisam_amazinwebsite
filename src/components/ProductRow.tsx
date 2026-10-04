@@ -43,6 +43,9 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
 
   const reviewExcerpt = getReviewExcerpt();
   const displayTags = tags.slice(0, 10);
+  
+  // Show "only N left" indicator for low stock
+  const showLowStock = product.stockQuantity > 0 && product.stockQuantity <= 5;
 
   return (
     <li className="bg-white border rounded-lg p-3 flex flex-wrap sm:flex-nowrap items-center gap-3" data-testid="product-row">
@@ -66,6 +69,12 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
           <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full">{rating.badge}</span>
           <span className="text-gray-600 ml-2">Score {rating.score}/100</span>
         </div>
+
+        {showLowStock && (
+          <div className="text-xs text-orange-600 mt-1 font-medium">
+            Only {product.stockQuantity} left
+          </div>
+        )}
 
         {/* Tags */}
         {displayTags.length > 0 && (

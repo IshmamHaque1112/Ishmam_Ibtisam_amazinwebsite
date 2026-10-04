@@ -103,7 +103,26 @@ const CartView: React.FC = () => {
   // removes those lines from the cart. No payment is taken.
   const handleCheckout = () => {
     if (!canCheckout) return;
-    const lineIds = cartItems.filter(item => item.isSelected).map(item => item.id);
+    
+    // Check stock availability
+    const selectedItems = cartItems.filter(item => item.isSelected);
+    const outOfStockItems: string[] = [];
+    
+    for (const item of selectedItems) {
+      const product = products.find(p => p.id === item.productId);
+      if (product && item.quantity > product.stockQuantity) {
+        outOfStockItems.push(product.name);
+      }
+    }
+    
+    if (outOfStockItems.length > 0) {
+      const itemNames = outOfStockItems.slice(0, 3).join(', ');
+      const suffix = outOfStockItems.length > 3 ? ` and ${outOfStockItems.length - 3} more` : '';
+      setCheckoutError(`Not enough supply for: ${itemNames}${suffix}. Please reduce quantities or remove these items.`);
+      return;
+    }
+    
+    const lineIds = selectedItems.map(item => item.id);
     const folderNames = groups.filter(g => g.folderId !== undefined).map(g => g.name);
     const order = placeOrder(
       lineIds,

@@ -39,6 +39,10 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
   }
 
   const handleAdd = () => {
+    // Check if product is out of stock
+    if (product.stockQuantity === 0) {
+      return; // Don't add if out of stock
+    }
     const added = addToCart(product, folderId || undefined);
     setFeedback(added > 0 ? 'added' : 'max');
   };
@@ -97,12 +101,17 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
       <button
         type="button"
         onClick={handleAdd}
-        className={`bg-amazin-orange hover:bg-amazin-yellow text-gray-900 font-semibold rounded transition-colors whitespace-nowrap ${
+        disabled={product.stockQuantity === 0}
+        className={`${
+          product.stockQuantity === 0
+            ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+            : 'bg-amazin-orange hover:bg-amazin-yellow text-gray-900'
+        } font-semibold rounded transition-colors whitespace-nowrap ${
           compact ? 'min-h-11 text-sm px-4' : 'w-full min-h-11 text-sm px-4 py-2'
         }`}
         aria-label={`Add ${product.name} to cart`}
       >
-        {feedback === 'added' ? 'Added ✓' : 'Add to Cart'}
+        {product.stockQuantity === 0 ? 'Out of Stock' : feedback === 'added' ? 'Added ✓' : 'Add to Cart'}
       </button>
       <span className={`block text-xs ${feedback === 'max' ? 'text-red-800 mt-1' : 'sr-only'}`} role="status">
         {feedback === 'added' && `${product.name} added to your cart.`}

@@ -11,6 +11,7 @@ export interface Product {
   rating: number; // 0-5 customer rating
   sellerId: string;
   sellerName: string;
+  stockQuantity: number; // available stock
 }
 
 export interface Seller {
@@ -35,6 +36,9 @@ export interface Customer {
   accountType: string;
   favoriteCategory: string | null;
   password: string;
+  role: 'shopper' | 'seller' | 'admin';
+  managedSellerId?: string; // only for seller accounts
+  authUserId?: string; // link to Supabase auth.users
 }
 
 // Additional types for Supabase tables
@@ -181,4 +185,31 @@ export interface SellerRating {
     quality: number;
     delivery: number;
   };
+}
+
+// Feedback / chat system
+export interface FeedbackThread {
+  threadId: string;
+  customerUsername: string;
+  sellerId: string;
+  productId?: string;
+  status: 'open' | 'resolved';
+  createdAt: string;
+}
+
+export interface FeedbackMessage {
+  messageId: string;
+  threadId: string;
+  senderType: 'customer' | 'seller';
+  senderName: string;
+  messageText: string;
+  sentAt: string;
+}
+
+// Cart holds for stock reservation
+export interface CartHold {
+  username: string;
+  productId: string;
+  quantity: number;
+  updatedAt: string;
 }

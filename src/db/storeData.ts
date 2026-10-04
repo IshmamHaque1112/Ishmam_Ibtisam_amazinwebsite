@@ -13,7 +13,10 @@ import {
   ProductSearch,
   Seller,
   SellerReview,
-  TagWithCount
+  TagWithCount,
+  FeedbackThread,
+  FeedbackMessage,
+  CartHold
 } from '../types';
 
 // The store keeps the whole catalog in memory and answers page queries
@@ -92,7 +95,8 @@ const toProduct = (r: Row): Product => ({
   storeRecommended: flag(r.store_recommended),
   rating: num(r.product_rating),
   sellerId: str(r.seller_id),
-  sellerName: str(r.seller_name)
+  sellerName: str(r.seller_name),
+  stockQuantity: r.stock_quantity !== undefined ? num(r.stock_quantity) : 999 // Default high stock for CSV mode
 });
 
 const toSeller = (r: Row): Seller => ({
@@ -117,7 +121,10 @@ const toCustomer = (r: Row): Customer => ({
   joinDate: str(r.join_date),
   accountType: str(r.account_type) || 'New',
   favoriteCategory: r.favorite_category ? str(r.favorite_category) : null,
-  password: ''
+  password: '',
+  role: (r.role as 'shopper' | 'seller' | 'admin') || 'shopper',
+  managedSellerId: r.managed_seller_id ? str(r.managed_seller_id) : undefined,
+  authUserId: r.auth_user_id ? str(r.auth_user_id) : undefined
 });
 
 const toProductReview = (r: Row): ProductReview => ({
@@ -164,6 +171,31 @@ const toPricePoint = (r: Row): PriceHistoryPoint => ({
   recordedAt: str(first(r, 'recorded_at', 'recordedAt', 'price_date', 'history_date', 'date', 'created_at')).slice(0, 10)
 });
 
+const toFeedbackThread = (r: Row): FeedbackThread => ({
+  threadId: str(first(r, 'thread_id', 'threadId')),
+  customerUsername: str(first(r, 'customer_username', 'customerUsername')),
+  sellerId: str(first(r, 'seller_id', 'sellerId')),
+  productId: r.product_id ? str(first(r, 'product_id', 'productId')) : undefined,
+  status: (first(r, 'status') as 'open' | 'resolved') || 'open',
+  createdAt: str(first(r, 'created_at', 'createdAt', 'created'))
+});
+
+const toFeedbackMessage = (r: Row): FeedbackMessage => ({
+  messageId: str(first(r, 'message_id', 'messageId')),
+  threadId: str(first(r, 'thread_id', 'threadId')),
+  senderType: (first(r, 'sender_type', 'senderType') as 'customer' | 'seller') || 'customer',
+  senderName: str(first(r, 'sender_name', 'senderName')),
+  messageText: str(first(r, 'message_text', 'messageText', 'text')),
+  sentAt: str(first(r, 'sent_at', 'sentAt', 'created_at'))
+});
+
+const toCartHold = (r: Row): CartHold => ({
+  username: str(first(r, 'username')),
+  productId: str(first(r, 'product_id', 'productId')),
+  quantity: num(first(r, 'quantity')),
+  updatedAt: str(first(r, 'updated_at', 'updatedAt'))
+});
+
 // Groups tag rows into "tag (count)" chips, most used first.
 const countTags = (rows: { tagName: string }[]): TagWithCount[] => {
   const counts = new Map<string, TagWithCount>();
@@ -194,6 +226,9 @@ interface LocalData {
   sellerReviews: SellerReview[];
   productTags: ProductTagRow[];
   sellerTags: SellerTagRow[];
+  feedbackThreads: FeedbackThread[];
+  feedbackMessages: FeedbackMessage[];
+  cartHolds: CartHold[];
 }
 
 const emptyLocal = (): LocalData => ({
@@ -201,7 +236,10 @@ const emptyLocal = (): LocalData => ({
   productReviews: [],
   sellerReviews: [],
   productTags: [],
-  sellerTags: []
+  sellerTags: [],
+  feedbackThreads: [],
+  feedbackMessages: [],
+  cartHolds: []
 });
 
 const readLocal = (): LocalData => {
@@ -219,7 +257,10 @@ const readLocal = (): LocalData => {
           joinDate: c.joinDate,
           accountType: 'New',
           favoriteCategory: null,
-          password: ''
+          password: '',
+          role: 'shopper',
+          managedSellerId: undefined,
+          authUserId: undefined
         });
       }
     }
@@ -252,6 +293,9 @@ export class StoreData {
     private productTags: ProductTagRow[],
     private sellerTags: SellerTagRow[],
     private priceHistory: PriceHistoryPoint[],
+    private feedbackThreads: FeedbackThread[],
+    private feedbackMessages: FeedbackMessage[],
+    private cartHolds: CartHold[],
     // Lets the provider re-render pages after a write.
     private onChange: () => void = () => {}
   ) {
@@ -270,6 +314,38 @@ export class StoreData {
 
   getProduct(id: string): Product | undefined {
     return this.products.find(p => p.id === id);
+  }
+
+  async updateProductStock(productId: string, stockQuantity: number): Promise<void> {
+    const product = this.getProduct(productId);
+    if (!product) throw new Error('Product not found');
+    
+    if (this.source === 'supabase' && supabase) {
+      const { error } = await supabase
+        .from('products')
+        .update({ stock_quantity: stockQuantity })
+        .eq('product_id', productId);
+      if (error) throw new Error(error.message);
+    }
+    
+    product.stockQuantity = stockQuantity;
+    this.onChange();
+  }
+
+  async updateProductPrice(productId: string, currentPrice: number): Promise<void> {
+    const product = this.getProduct(productId);
+    if (!product) throw new Error('Product not found');
+    
+    if (this.source === 'supabase' && supabase) {
+      const { error } = await supabase
+        .from('products')
+        .update({ current_price: currentPrice })
+        .eq('product_id', productId);
+      if (error) throw new Error(error.message);
+    }
+    
+    product.currentPrice = currentPrice;
+    this.onChange();
   }
 
   getProductsBySeller(sellerId: string): Product[] {
@@ -334,6 +410,149 @@ export class StoreData {
 
   getSellerTags(sellerId: string): TagWithCount[] {
     return countTags(this.sellerTags.filter(t => t.sellerId === sellerId));
+  }
+
+  // Feedback threads and messages
+  getFeedbackThreadsForCustomer(username: string): FeedbackThread[] {
+    return this.feedbackThreads.filter(t => t.customerUsername === username).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  getFeedbackThreadsForSeller(sellerId: string): FeedbackThread[] {
+    return this.feedbackThreads.filter(t => t.sellerId === sellerId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  getFeedbackThread(threadId: string): FeedbackThread | undefined {
+    return this.feedbackThreads.find(t => t.threadId === threadId);
+  }
+
+  getFeedbackMessages(threadId: string): FeedbackMessage[] {
+    return this.feedbackMessages.filter(m => m.threadId === threadId).sort((a, b) => a.sentAt.localeCompare(b.sentAt));
+  }
+
+  async createFeedbackThread(thread: Omit<FeedbackThread, 'threadId' | 'createdAt'>): Promise<FeedbackThread> {
+    const saved = await this.insert('feedback_threads', {
+      customer_username: thread.customerUsername,
+      seller_id: thread.sellerId,
+      product_id: thread.productId ?? null,
+      status: thread.status
+    });
+    const newThread: FeedbackThread = saved ? toFeedbackThread(saved) : {
+      ...thread,
+      threadId: newId('FT'),
+      createdAt: new Date().toISOString().slice(0, 10)
+    };
+    this.feedbackThreads.push(newThread);
+    this.persistLocal();
+    this.onChange();
+    return newThread;
+  }
+
+  async addFeedbackMessage(message: Omit<FeedbackMessage, 'messageId' | 'sentAt'>): Promise<void> {
+    const saved = await this.insert('feedback_messages', {
+      thread_id: message.threadId,
+      sender_type: message.senderType,
+      sender_name: message.senderName,
+      message_text: message.messageText
+    });
+    const newMessage: FeedbackMessage = saved ? toFeedbackMessage(saved) : {
+      ...message,
+      messageId: newId('FM'),
+      sentAt: new Date().toISOString().slice(0, 10)
+    };
+    this.feedbackMessages.push(newMessage);
+    this.persistLocal();
+    this.onChange();
+  }
+
+  async updateThreadStatus(threadId: string, status: 'open' | 'resolved'): Promise<void> {
+    if (this.source === 'supabase' && supabase) {
+      const { error } = await supabase
+        .from('feedback_threads')
+        .update({ status })
+        .eq('thread_id', threadId);
+      if (error) throw new Error(error.message);
+    }
+    const thread = this.feedbackThreads.find(t => t.threadId === threadId);
+    if (thread) {
+      thread.status = status;
+      this.persistLocal();
+      this.onChange();
+    }
+  }
+
+  // Cart holds for stock reservation
+  getCartHoldsForProduct(productId: string): CartHold[] {
+    return this.cartHolds.filter(h => h.productId === productId);
+  }
+
+  getCartHold(username: string, productId: string): CartHold | undefined {
+    return this.cartHolds.find(h => h.username === username && h.productId === productId);
+  }
+
+  async setCartHold(username: string, productId: string, quantity: number): Promise<void> {
+    if (quantity <= 0) {
+      // Delete the hold
+      if (this.source === 'supabase' && supabase) {
+        const { error } = await supabase
+          .from('cart_holds')
+          .delete()
+          .eq('username', username)
+          .eq('product_id', productId);
+        if (error) throw new Error(error.message);
+      }
+      this.cartHolds = this.cartHolds.filter(h => !(h.username === username && h.productId === productId));
+    } else {
+      // Upsert the hold
+      const existing = this.getCartHold(username, productId);
+      if (this.source === 'supabase' && supabase) {
+        const { error } = await supabase
+          .from('cart_holds')
+          .upsert({
+            username,
+            product_id: productId,
+            quantity,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'username,product_id' });
+        if (error) throw new Error(error.message);
+      }
+      if (existing) {
+        existing.quantity = quantity;
+        existing.updatedAt = new Date().toISOString();
+      } else {
+        this.cartHolds.push({
+          username,
+          productId,
+          quantity,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+    this.persistLocal();
+    this.onChange();
+  }
+
+  async clearCartHolds(username: string): Promise<void> {
+    if (this.source === 'supabase' && supabase) {
+      const { error } = await supabase
+        .from('cart_holds')
+        .delete()
+        .eq('username', username);
+      if (error) throw new Error(error.message);
+    }
+    this.cartHolds = this.cartHolds.filter(h => h.username !== username);
+    this.persistLocal();
+    this.onChange();
+  }
+
+  getAvailableStock(productId: string, excludeUsername?: string): number {
+    const product = this.getProduct(productId);
+    if (!product) return 0;
+    
+    const heldByOthers = this.cartHolds
+      .filter(h => h.productId === productId && (!excludeUsername || h.username !== excludeUsername))
+      .reduce((sum, h) => sum + h.quantity, 0);
+    
+    return Math.max(0, product.stockQuantity - heldByOthers);
   }
 
   async addProductReview(review: NewProductReview): Promise<void> {
@@ -402,7 +621,7 @@ export class StoreData {
     // Someone may have registered on another device since the page loaded.
     const { data } = await supabase
       .from('customers')
-      .select('customer_id, username, display_name, join_date, account_type, favorite_category')
+      .select('customer_id, username, display_name, join_date, account_type, favorite_category, role, managed_seller_id, auth_user_id')
       .ilike('username', name)
       .maybeSingle();
     if (!data) return undefined;
@@ -526,7 +745,10 @@ export class StoreData {
       productReviews: this.productReviews,
       sellerReviews: this.sellerReviews,
       productTags: this.productTags,
-      sellerTags: this.sellerTags
+      sellerTags: this.sellerTags,
+      feedbackThreads: this.feedbackThreads,
+      feedbackMessages: this.feedbackMessages,
+      cartHolds: this.cartHolds
     });
   }
 }
@@ -548,7 +770,10 @@ const loadFromCsv = (): StoreData => {
     local.sellerReviews,
     local.productTags,
     local.sellerTags,
-    []
+    [],
+    local.feedbackThreads,
+    local.feedbackMessages,
+    local.cartHolds
   );
 };
 
@@ -591,14 +816,17 @@ const loadFromSupabase = async (): Promise<StoreData> => {
     throw new Error('products or sellers table is empty');
   }
 
-  const [customers, productReviews, sellerReviews, productTags, sellerTags, priceHistory] = await Promise.all([
+  const [customers, productReviews, sellerReviews, productTags, sellerTags, priceHistory, feedbackThreads, feedbackMessages, cartHolds] = await Promise.all([
     // Never select the password column into the browser.
-    fetchOptional('customers', 'customer_id, username, display_name, join_date, account_type, favorite_category'),
+    fetchOptional('customers', 'customer_id, username, display_name, join_date, account_type, favorite_category, role, managed_seller_id, auth_user_id'),
     fetchOptional('product_reviews'),
     fetchOptional('seller_reviews'),
     fetchOptional(['product_tags', 'product_tag']),
     fetchOptional(['seller_tags', 'seller_tag']),
-    fetchOptional('price_history')
+    fetchOptional('price_history'),
+    fetchOptional('feedback_threads'),
+    fetchOptional('feedback_messages'),
+    fetchOptional('cart_holds')
   ]);
 
   // Blurbs can live on the sellers table or in a separate seller_blurbs table.
@@ -626,7 +854,10 @@ const loadFromSupabase = async (): Promise<StoreData> => {
     sellerReviews.map(toSellerReview),
     productTags.map(toProductTag),
     sellerTags.map(toSellerTag),
-    priceHistory.map(toPricePoint)
+    priceHistory.map(toPricePoint),
+    feedbackThreads.map(toFeedbackThread),
+    feedbackMessages.map(toFeedbackMessage),
+    cartHolds.map(toCartHold)
   );
 };
 

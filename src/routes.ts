@@ -14,6 +14,10 @@ export type Route =
   | { name: 'login'; params: URLSearchParams }
   | { name: 'cart' }
   | { name: 'account' }
+  | { name: 'sellerDashboard' }
+  | { name: 'sellerInventory' }
+  | { name: 'sellerFeedback' }
+  | { name: 'feedbackChat'; threadId?: string }
   | { name: 'notFound' };
 
 export const parseHash = (hash: string): Route => {
@@ -48,6 +52,14 @@ export const parseHash = (hash: string): Route => {
       return { name: 'cart' };
     case 'account':
       return { name: 'account' };
+    case 'seller-dashboard':
+      return { name: 'sellerDashboard' };
+    case 'seller-inventory':
+      return { name: 'sellerInventory' };
+    case 'seller-feedback':
+      return { name: 'sellerFeedback' };
+    case 'feedback-chat':
+      return parts[1] ? { name: 'feedbackChat', threadId: parts[1] } : { name: 'feedbackChat' };
     default:
       return { name: 'notFound' };
   }
@@ -75,7 +87,11 @@ export const href = {
   search: (params: URLSearchParams) => `#/search?${params.toString()}`,
   login: (next?: string) => (next ? `#/login?next=${encodeURIComponent(next)}` : '#/login'),
   cart: () => '#/cart',
-  account: () => '#/account'
+  account: () => '#/account',
+  sellerDashboard: () => '#/seller-dashboard',
+  sellerInventory: () => '#/seller-inventory',
+  sellerFeedback: () => '#/seller-feedback',
+  feedbackChat: (threadId?: string) => threadId ? `#/feedback-chat/${encodeURIComponent(threadId)}` : '#/feedback-chat'
 };
 
 // Only allow redirects back into this app (hash routes), never to other sites.

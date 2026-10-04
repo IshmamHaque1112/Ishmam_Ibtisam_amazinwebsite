@@ -122,6 +122,12 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
               {product.storeRecommended && (
                 <p className="text-sm text-green-700 mt-1">✓ Store recommended</p>
               )}
+              {product.stockQuantity > 0 && product.stockQuantity <= 5 && (
+                <p className="text-sm text-orange-600 mt-1 font-medium">Only {product.stockQuantity} left</p>
+              )}
+              {product.stockQuantity === 0 && (
+                <p className="text-sm text-red-600 mt-1 font-medium">Out of stock</p>
+              )}
             </div>
           </div>
 

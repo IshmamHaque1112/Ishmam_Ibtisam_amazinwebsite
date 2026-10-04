@@ -1,0 +1,8 @@
+thread_id,customer_username,seller_id,product_id,status,created_at
+T001,isabella.brown,S024,P024,open,2026-09-19
+T002,noah.garcia,S013,P013,resolved,2026-09-16
+T003,grace.bennett,S003,P012,open,2026-09-22
+T004,james.rossi,S014,P023,resolved,2026-09-11
+T005,evelyn.hassan,S017,P009,open,2026-09-24
+T006,scarlett.suzuki,S020,P018,resolved,2026-09-14
+T007,mia.chowdhury,S012,P012,open,2026-09-23

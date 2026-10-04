@@ -9,11 +9,13 @@ interface LoginPageProps {
 }
 
 type Mode = 'login' | 'register' | 'setup';
+type LoginType = 'shopper' | 'seller';
 
 const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
   const db = useDb();
   const { username: current, login, logout } = useStore();
   const [mode, setMode] = useState<Mode>('login');
+  const [loginType, setLoginType] = useState<LoginType>('shopper');
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
@@ -25,7 +27,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
 
   const finish = async (name: string) => {
     await login(name);
-    navigate(next);
+    // Route sellers to their dashboard, shoppers to the normal next or products
+    const customer = await db.findCustomer(name);
+    if (customer?.role === 'seller') {
+      navigate(href.sellerDashboard());
+    } else {
+      navigate(next);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -39,6 +47,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
         setMode('register');
         return;
       }
+      
+      // Check role matches login type
+      if (loginType === 'seller' && customer.role !== 'seller') {
+        setError(`"${normalizeUsername(username)}" is not a seller account. Try the "I'm shopping" tab.`);
+        return;
+      }
+      if (loginType === 'shopper' && customer.role === 'seller') {
+        setError(`"${normalizeUsername(username)}" is a seller account. Try the "I'm a seller" tab.`);
+        return;
+      }
+      
       // Demo catalog accounts created before passwords existed won't have
       // one set in this browser/data source yet - see db.needsPasswordSetup.
       if (db.needsPasswordSetup(customer.username)) {
@@ -117,11 +136,41 @@ const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
         <h1 className="text-2xl font-bold text-gray-900">
           {mode === 'login' ? 'Log in' : mode === 'setup' ? 'Set a password' : 'Create an account'}
         </h1>
+        
+        {mode === 'login' && (
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setLoginType('shopper')}
+              className={`flex-1 py-2 px-4 rounded font-medium ${
+                loginType === 'shopper'
+                  ? 'bg-amazin-orange text-gray-900'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              I'm shopping
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginType('seller')}
+              className={`flex-1 py-2 px-4 rounded font-medium ${
+                loginType === 'seller'
+                  ? 'bg-amazin-orange text-gray-900'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              I'm a seller
+            </button>
+          </div>
+        )}
+        
         <p className="text-sm text-gray-600 mb-4">
           {mode === 'setup' ? (
             <>This account doesn't have a password set yet. Choose one to finish logging in as <strong>{normalized}</strong>.</>
           ) : cartRedirect ? (
             'Log in to see your cart. You can keep browsing as a guest without an account.'
+          ) : loginType === 'seller' ? (
+            'Log in as a seller to manage your inventory and respond to customer feedback.'
           ) : (
             'Log in with your username and password to use the cart, see your orders and post reviews. Browsing is open to everyone.'
           )}
@@ -248,13 +297,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ params }) => {
         </form>
 
         <p className="text-sm text-gray-600 mt-4 text-center">
-          {mode === 'login' && (
+          {mode === 'login' && loginType === 'shopper' && (
             <>
               New to Amazin?{' '}
               <button type="button" className="text-amazin-blue hover:underline" onClick={() => switchMode('register')}>
                 Create an account
               </button>
             </>
+          )}
+          {mode === 'login' && loginType === 'seller' && (
+            <span className="text-gray-500">
+              Seller accounts are pre-provisioned. Contact your administrator if you need access.
+            </span>
           )}
           {mode === 'register' && (
             <>
