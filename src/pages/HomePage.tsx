@@ -2,6 +2,17 @@ import React from 'react';
 import hero from '../assets/home-hero.jpg';
 import logo from '../assets/logo-full.png';
 import { href, useDocumentTitle } from '../router';
+import { HOW_WE_DIFFER } from '../copy/differentiators';
+
+// Where each promise can be seen in the app, in the same order as
+// HOW_WE_DIFFER.items.
+const LINKS = [
+  { label: 'Browse products', href: href.products() },
+  { label: 'See the best deals', href: href.products(new URLSearchParams({ sort: 'deal' })) },
+  { label: 'Meet our sellers', href: href.sellers() },
+  { label: 'Read reviews on any product', href: href.products(new URLSearchParams({ sort: 'rating' })) },
+  { label: 'Check stock on any product', href: href.products() }
+];
 
 const HomePage: React.FC = () => {
   useDocumentTitle('');
@@ -23,13 +34,19 @@ const HomePage: React.FC = () => {
         </div>
       </div>
     </section>
-    <section className="max-w-7xl mx-auto px-6 py-12">
-      <h2 className="text-2xl font-bold text-gray-900">A more informed way to shop</h2>
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <article className="rounded-lg border bg-gray-50 p-5"><h3 className="font-semibold text-gray-900">See pricing clearly</h3><p className="mt-2 text-sm text-gray-600">Compare today’s price with historical lows and recent highs.</p></article>
-        <article className="rounded-lg border bg-gray-50 p-5"><h3 className="font-semibold text-gray-900">Know the seller</h3><p className="mt-2 text-sm text-gray-600">Review return policies, sourcing, and price, quality, and delivery ratings.</p></article>
-        <article className="rounded-lg border bg-gray-50 p-5"><h3 className="font-semibold text-gray-900">Hear from shoppers</h3><p className="mt-2 text-sm text-gray-600">Read product and seller reviews and share your own experience.</p></article>
-      </div>
+    <section className="max-w-7xl mx-auto px-6 py-12" aria-labelledby="how-different-heading" data-testid="how-different">
+      <h2 id="how-different-heading" className="text-2xl font-bold text-gray-900">{HOW_WE_DIFFER.heading}</h2>
+      <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {HOW_WE_DIFFER.items.map((item, index) => (
+          <li key={item.title} className="rounded-lg border bg-gray-50 p-5">
+            <h3 className="font-semibold text-gray-900">{item.title}</h3>
+            <p className="mt-2 text-sm text-gray-600">{item.body}</p>
+            <a href={LINKS[index].href} className="mt-3 inline-block text-sm font-medium text-amazin-blue hover:underline">
+              {LINKS[index].label}
+            </a>
+          </li>
+        ))}
+      </ul>
     </section>
   </div>
   );

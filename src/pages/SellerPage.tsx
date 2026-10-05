@@ -8,6 +8,7 @@ import ProductRow from '../components/ProductRow';
 import RatingGraph from '../components/RatingGraph';
 import NotFoundPage from './NotFoundPage';
 import { ReviewForm, TagForm } from '../components/FeedbackForms';
+import { SellerResponsivenessPanel } from '../components/TrustSignals';
 
 const RatingBar: React.FC<{ label: string; value: number }> = ({ label, value }) => (
   <div className="text-sm">
@@ -172,6 +173,12 @@ const SellerPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, pa
           <RatingBar label="Overall" value={seller.overallRating} />
         </div>
       </div>
+
+      <SellerResponsivenessPanel
+        threads={db.getFeedbackThreadsForSeller(seller.id)}
+        messagesForThread={threadId => db.getFeedbackMessages(threadId)}
+        messageHref={username ? href.startFeedback(seller.id) : href.login(href.startFeedback(seller.id))}
+      />
 
       {!dataLoading && reviews.length > 0 && <div className="mt-6"><RatingGraph reviews={reviews} /></div>}
 
