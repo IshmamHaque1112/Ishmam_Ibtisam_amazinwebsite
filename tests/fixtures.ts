@@ -11,6 +11,7 @@ export const product = (overrides: Partial<Product> = {}): Product => ({
   rating: 4,
   sellerId: 'S001',
   sellerName: 'Test Seller',
+  stockQuantity: 20,
   ...overrides
 });
 
