@@ -10,17 +10,22 @@ import RatingGraph from '../components/RatingGraph';
 import PriceHistoryChart from '../components/PriceHistoryChart';
 import NotFoundPage from './NotFoundPage';
 import { ReviewForm, TagForm } from '../components/FeedbackForms';
+import { PriceSignalBadge, SellerResponsivenessLine, StockLabel, TrustBadge } from '../components/TrustSignals';
+import { findVerifyingOrder } from '../utils/differentiators';
+import { VERIFIED } from '../copy/differentiators';
+import { ProductReview } from '../types';
 
 const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, params }) => {
   const db = useDb();
-  const { username } = useStore();
+  const { username, orders } = useStore();
   const product = db.getProduct(id);
   const highlightReviewId = params?.get('review') ?? null;
 
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showTagForm, setShowTagForm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [tags, setTags] = useState<any[]>([]);
   const [priceHistory, setPriceHistory] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -64,6 +69,9 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
   const rating = calculateProductRating(product, seller);
   const sellerRating = seller ? calculateSellerRating(seller) : undefined;
   const dealScore = calculateDealScore(product);
+  const verifiedCount = reviews.filter(r => r.verifiedPurchase).length;
+  const visibleReviews = verifiedOnly ? reviews.filter(r => r.verifiedPurchase) : reviews;
+  const hasOrdered = findVerifyingOrder(id, orders, Date.now()) !== undefined;
   const more = db
     .searchProducts({ category: product.category })
     .filter(p => p.id !== product.id)
@@ -71,12 +79,16 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
 
   const saveReview = async (review: { rating: number; title?: string; reviewText?: string }) => {
     if (!username) throw new Error('Not logged in');
+    // Verified only when this account ordered the product before reviewing.
+    const orderId = findVerifyingOrder(id, orders, Date.now());
     await db.addProductReview({
       productId: id,
       username,
       ...review,
       reviewDate: new Date().toISOString().slice(0, 10),
-      helpfulVotes: 0
+      helpfulVotes: 0,
+      verifiedPurchase: orderId ? true : undefined,
+      orderId
     });
     // Reload reviews after adding
     const reviewsData = await db.getProductReviews(id);
@@ -122,12 +134,9 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
               {product.storeRecommended && (
                 <p className="text-sm text-green-700 mt-1">✓ Store recommended</p>
               )}
-              {product.stockQuantity > 0 && product.stockQuantity <= 5 && (
-                <p className="text-sm text-orange-600 mt-1 font-medium">Only {product.stockQuantity} left</p>
-              )}
-              {product.stockQuantity === 0 && (
-                <p className="text-sm text-red-600 mt-1 font-medium">Out of stock</p>
-              )}
+              <p className="mt-1">
+                <StockLabel quantity={product.stockQuantity} className="text-sm" />
+              </p>
             </div>
           </div>
 
@@ -166,6 +175,7 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
         <aside className="space-y-4">
           <div className="bg-white border rounded-lg p-4">
             <div className="text-2xl font-bold">{formatMoney(product.currentPrice)}</div>
+            <PriceSignalBadge product={product} className="mt-1" />
             <div className="mt-3">
               <AddToCart product={product} showFolderPicker />
             </div>
@@ -180,6 +190,10 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
               <a href={username ? href.startFeedback(seller.id, product.id) : href.login(href.startFeedback(seller.id, product.id))} className="mt-2 inline-flex rounded border border-amazin-blue px-3 py-1.5 text-sm font-medium text-amazin-blue hover:bg-blue-50">
                 Ask about this product
               </a>
+              <SellerResponsivenessLine
+                threads={db.getFeedbackThreadsForSeller(seller.id)}
+                messagesForThread={threadId => db.getFeedbackMessages(threadId)}
+              />
               <p className="mt-1">
                 <span className="bg-green-50 text-green-800 px-2 py-0.5 rounded-full text-xs">{sellerRating.badge}</span>
                 <span className="ml-2 text-gray-600">Seller score {sellerRating.score}/100</span>
@@ -276,6 +290,25 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
           )}
         </div>
 
+        {reviews.length > 0 && (
+          <div className="-mt-1 mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span className="text-gray-600">{VERIFIED.count(verifiedCount, reviews.length)}</span>
+            <label className="inline-flex min-h-11 items-center gap-2 text-gray-800">
+              <input
+                type="checkbox"
+                checked={verifiedOnly}
+                onChange={e => setVerifiedOnly(e.target.checked)}
+                className="h-4 w-4"
+              />
+              {VERIFIED.filter}
+            </label>
+            <p className="w-full text-xs text-gray-600">{VERIFIED.legend}</p>
+          </div>
+        )}
+
+        {showReviewForm && (
+          <p className="text-xs text-gray-600 mb-2">{hasOrdered ? VERIFIED.willBeVerified : VERIFIED.wontBeVerified}</p>
+        )}
         {showReviewForm && (
           <ReviewForm
             subject="product"
@@ -289,9 +322,9 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
 
         {dataLoading ? (
           <p className="text-sm text-gray-600">Loading reviews...</p>
-        ) : reviews.length > 0 ? (
+        ) : visibleReviews.length > 0 ? (
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {reviews.map((review, index) => (
+            {visibleReviews.map((review, index) => (
               <div
                 key={index}
                 id={`review-${review.reviewId}`}
@@ -305,6 +338,12 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
                   <div>
                     <Stars rating={review.rating} />
                     <span className="text-sm text-gray-600 ml-2">{review.username}</span>
+                    {review.verifiedPurchase && (
+                      <TrustBadge kind="good" className="ml-2">
+                        <span aria-hidden="true">✓&nbsp;</span>
+                        {VERIFIED.badge}
+                      </TrustBadge>
+                    )}
                   </div>
                   <span className="text-xs text-gray-500">{review.reviewDate}</span>
                 </div>
@@ -320,6 +359,8 @@ const ProductPage: React.FC<{ id: string; params?: URLSearchParams }> = ({ id, p
               </div>
             ))}
           </div>
+        ) : reviews.length > 0 ? (
+          <p className="text-sm text-gray-600">No verified purchase reviews yet.</p>
         ) : (
           <p className="text-sm text-gray-600">No reviews yet. Be the first to review this product!</p>
         )}

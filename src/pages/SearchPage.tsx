@@ -4,7 +4,8 @@ import ProductRow from '../components/ProductRow';
 import CatalogControls from '../components/CatalogControls';
 import { formatMoney } from '../utils/cartPricing';
 import { href, navigate, useDocumentTitle } from '../router';
-import { applyCatalogFilters, CatalogFilters, readCatalogFilters, writeCatalogFilters } from '../utils/catalog';
+import { applyCatalogFilters, CatalogFilters, readCatalogFilters, sortLabel, writeCatalogFilters } from '../utils/catalog';
+import { NoSponsoredNote } from '../components/TrustSignals';
 
 interface SearchPageProps {
   params: URLSearchParams;
@@ -46,6 +47,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ params }) => {
         {described.length ? described.join(' · ') : 'All products'} · {results.length} found
       </p>
       {matches.length > 0 && <CatalogControls filters={filters} onChange={update} resultCount={results.length} categories={db.getCategories()} />}
+      {matches.length > 0 && <NoSponsoredNote sortLabel={sortLabel(filters.sort)} />}
       {results.length === 0 ? (
         <div className="bg-white border rounded-lg p-8 text-center text-gray-700" data-testid="no-results">
           <p>Products cannot be found</p>

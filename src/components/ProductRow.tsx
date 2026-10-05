@@ -5,6 +5,7 @@ import { calculateProductRating } from '../utils/ratingCalculations';
 import { formatMoney } from '../utils/cartPricing';
 import { CategoryIcon, Stars } from './Icons';
 import AddToCart from './AddToCart';
+import { PriceSignalBadge, StockLabel } from './TrustSignals';
 
 interface ProductRowProps {
   product: Product;
@@ -43,9 +44,7 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
 
   const reviewExcerpt = getReviewExcerpt();
   const displayTags = tags.slice(0, 10);
-  
-  // Show "only N left" indicator for low stock
-  const showLowStock = product.stockQuantity > 0 && product.stockQuantity <= 5;
+
 
   return (
     <li className="bg-white border rounded-lg p-3 flex flex-wrap sm:flex-nowrap items-center gap-3" data-testid="product-row">
@@ -70,11 +69,9 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
           <span className="text-gray-600 ml-2">Score {rating.score}/100</span>
         </div>
 
-        {showLowStock && (
-          <div className="text-xs text-orange-600 mt-1 font-medium">
-            Only {product.stockQuantity} left
-          </div>
-        )}
+        <div className="mt-1">
+          <StockLabel quantity={product.stockQuantity} />
+        </div>
 
         {/* Tags */}
         {displayTags.length > 0 && (
@@ -105,9 +102,10 @@ const ProductRow: React.FC<ProductRowProps> = ({ product, seller, tags = [], rev
         )}
       </div>
       <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-3 border-t sm:border-0 pt-2 sm:pt-0">
-        <div className="sm:text-right sm:w-28">
+        <div className="sm:text-right sm:w-44">
           <div className="font-bold text-gray-900">{formatMoney(product.currentPrice)}</div>
           <div className="text-xs text-gray-600">Low {formatMoney(product.allTimeLowPrice)}</div>
+          <PriceSignalBadge product={product} className="mt-1" />
         </div>
         <div className="sm:min-w-[130px] text-right">
           <AddToCart product={product} compact />

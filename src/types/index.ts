@@ -51,6 +51,9 @@ export interface ProductReview {
   reviewText?: string;
   reviewDate: string;
   helpfulVotes: number;
+  // Set when the reviewer had ordered this product before writing the review.
+  verifiedPurchase?: boolean;
+  orderId?: string;
 }
 
 export interface ProductTag {

@@ -16,6 +16,10 @@ export const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'score', label: 'Amazin product score' }
 ];
 
+// The order the list is actually in, as shown next to "No sponsored results".
+export const sortLabel = (sort: SortKey): string =>
+  SORT_OPTIONS.find(option => option.value === sort)?.label ?? SORT_OPTIONS[0].label;
+
 export interface CatalogFilters {
   sort: SortKey;
   nearLow: boolean; // within NEAR_LOW_MARGIN of the all-time low

@@ -3,7 +3,8 @@ import { useDb } from '../db/DbProvider';
 import ProductRow from '../components/ProductRow';
 import CatalogControls from '../components/CatalogControls';
 import { href, navigate, useDocumentTitle } from '../router';
-import { applyCatalogFilters, CatalogFilters, readCatalogFilters, writeCatalogFilters } from '../utils/catalog';
+import { applyCatalogFilters, CatalogFilters, readCatalogFilters, sortLabel, writeCatalogFilters } from '../utils/catalog';
+import { NoSponsoredNote } from '../components/TrustSignals';
 
 const ProductsPage: React.FC<{ params: URLSearchParams }> = ({ params }) => {
   const db = useDb();
@@ -29,6 +30,7 @@ const ProductsPage: React.FC<{ params: URLSearchParams }> = ({ params }) => {
         {all.length} products · transparent pricing, quality ratings and seller details
       </p>
       <CatalogControls filters={filters} onChange={update} resultCount={products.length} categories={db.getCategories()} />
+      <NoSponsoredNote sortLabel={sortLabel(filters.sort)} />
       {products.length === 0 ? (
         <div className="bg-white border rounded-lg p-8 text-center text-gray-700" data-testid="no-results">
           <p>No products match these filters.</p>
