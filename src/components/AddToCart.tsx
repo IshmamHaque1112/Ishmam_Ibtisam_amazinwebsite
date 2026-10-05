@@ -111,7 +111,7 @@ const AddToCart: React.FC<AddToCartProps> = ({ product, showFolderPicker = false
         }`}
         aria-label={`Add ${product.name} to cart`}
       >
-        {product.stockQuantity === 0 ? 'Out of Stock' : feedback === 'added' ? 'Added ✓' : 'Add to Cart'}
+        {product.stockQuantity === 0 ? 'Out of stock' : feedback === 'added' ? 'Added ✓' : 'Add to Cart'}
       </button>
       <span className={`block text-xs ${feedback === 'max' ? 'text-red-800 mt-1' : 'sr-only'}`} role="status">
         {feedback === 'added' && `${product.name} added to your cart.`}

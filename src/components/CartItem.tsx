@@ -4,6 +4,9 @@ import { useStore } from '../context/store';
 import { href } from '../router';
 import { CategoryIcon } from './Icons';
 import MoveToMenu from './MoveToMenu';
+import { PriceSignalBadge } from './TrustSignals';
+import { getStockLabel } from '../utils/differentiators';
+import { STOCK } from '../copy/differentiators';
 import { formatPriceLockCountdown, isPriceLockValid } from '../utils/ratingCalculations';
 import {
   formatMoney,
@@ -72,6 +75,10 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLa
       : 0;
 
   const atMax = item.quantity >= MAX_QUANTITY;
+  // Real stock caps the quantity too. Checkout also blocks lines above stock.
+  const stock = Number.isFinite(product.stockQuantity) ? Math.max(0, product.stockQuantity) : Infinity;
+  const atStock = item.quantity >= stock;
+  const overStock = item.quantity > stock;
   const [dragging, setDragging] = useState(false);
 
   return (
@@ -124,6 +131,7 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLa
             <div className="sm:text-right flex-shrink-0">
               <div className="text-lg font-bold text-gray-900">{formatMoney(totalPrice)}</div>
               <div className="text-sm text-gray-600">{formatMoney(effectivePrice)} each</div>
+              <PriceSignalBadge product={product} className="mt-0.5" />
               {priceDropSavings > 0 && (
                 <div className="text-xs text-green-700">
                   Price dropped! You save {formatMoney(priceDropSavings)}
@@ -167,14 +175,27 @@ const CartItem: React.FC<CartItemProps> = ({ item, product, seller, onSavedForLa
               <button
                 type="button"
                 onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                disabled={atMax}
+                disabled={atMax || atStock}
                 className="w-9 h-9 bg-gray-200 hover:bg-gray-300 rounded flex items-center justify-center font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label={atMax ? `Maximum of ${MAX_QUANTITY} reached for ${product.name}` : `Increase quantity of ${product.name}`}
+                aria-label={
+                  atMax
+                    ? `Maximum of ${MAX_QUANTITY} reached for ${product.name}`
+                    : atStock
+                      ? `No more ${product.name} in stock`
+                      : `Increase quantity of ${product.name}`
+                }
               >
                 <span aria-hidden="true">+</span>
               </button>
             </div>
             {atMax && <span className="text-xs text-gray-600">Limit {MAX_QUANTITY} per item</span>}
+            {overStock ? (
+              <span className="text-xs font-medium text-amber-900 bg-amber-50 rounded px-1.5 py-0.5" role="status">
+                {STOCK.cartShort(stock)}
+              </span>
+            ) : (
+              !atMax && atStock && <span className="text-xs text-gray-600">{getStockLabel(stock).label}</span>
+            )}
 
             <button
               type="button"
