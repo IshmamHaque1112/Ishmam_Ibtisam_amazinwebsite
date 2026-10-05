@@ -4,6 +4,7 @@ import customersCsv from '../data/customers.csv?raw';
 import sellerBlurbsCsv from '../data/seller_blurbs.csv?raw';
 import feedbackThreadsCsv from '../../supabase/feedback_threads_seed.csv?raw';
 import feedbackMessagesCsv from '../../supabase/feedback_messages_seed.csv?raw';
+import productStockCsv from '../../supabase/product_stock_seed.csv?raw';
 import { parseCsv } from './csv';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase, authSignUp, authSignIn, authSignOut } from '../lib/supabase';
@@ -137,7 +138,11 @@ const toProductReview = (r: Row): ProductReview => ({
   title: first(r, 'title', 'review_title') ? str(first(r, 'title', 'review_title')) : undefined,
   reviewText: first(r, 'review_text', 'reviewText', 'review', 'text', 'body', 'content') ? str(first(r, 'review_text', 'reviewText', 'review', 'text', 'body', 'content')) : undefined,
   reviewDate: str(first(r, 'review_date', 'reviewDate', 'date_written', 'created_at', 'date')).slice(0, 10),
-  helpfulVotes: num(first(r, 'helpful_votes', 'helpfulVotes', 'helpful_count'))
+  helpfulVotes: num(first(r, 'helpful_votes', 'helpfulVotes', 'helpful_count')),
+  // Only present if the table has verified_purchase / order_id columns (or
+  // the review was saved in this browser in CSV mode).
+  verifiedPurchase: first(r, 'verified_purchase', 'verifiedPurchase') === true ? true : undefined,
+  orderId: first(r, 'order_id', 'orderId') ? str(first(r, 'order_id', 'orderId')) : undefined
 });
 
 const toSellerReview = (r: Row): SellerReview => ({
@@ -580,7 +585,15 @@ export class StoreData {
       review_date: review.reviewDate,
       helpful_votes: review.helpfulVotes
     });
-    const row: ProductReview = saved ? toProductReview(saved) : { ...review, reviewId: newId('PR') };
+    // The Supabase table has no verified_purchase column yet, so the flag is
+    // kept on the in-memory row (same as verifiedBuyer on seller reviews).
+    const row: ProductReview = saved
+      ? {
+          ...toProductReview(saved),
+          verifiedPurchase: review.verifiedPurchase ?? toProductReview(saved).verifiedPurchase,
+          orderId: review.orderId ?? toProductReview(saved).orderId
+        }
+      : { ...review, reviewId: newId('PR') };
     this.productReviews.push(row);
     this.persistLocal();
     this.onChange();
@@ -788,7 +801,10 @@ export class StoreData {
 const loadFromCsv = (): StoreData => {
   const blurbs = new Map(parseCsv(sellerBlurbsCsv).map(b => [b.seller_id, b.blurb]));
   const sellers = parseCsv(sellersCsv).map(s => toSeller({ ...s, blurb: blurbs.get(s.seller_id) }));
-  const products = parseCsv(productsCsv).map(toProduct);
+  // products.csv has no stock column; the real counts live in the stock seed
+  // (the same file Supabase is seeded from), so CSV mode shows true numbers.
+  const stock = new Map(parseCsv(productStockCsv).map(r => [r.product_id, r.stock_quantity]));
+  const products = parseCsv(productsCsv).map(p => toProduct({ ...p, stock_quantity: stock.get(p.product_id) }));
   const local = readLocal();
   const customers = [...parseCsv(customersCsv).map(toCustomer), ...local.customers];
   const seedThreads = parseCsv(feedbackThreadsCsv).map(toFeedbackThread);
